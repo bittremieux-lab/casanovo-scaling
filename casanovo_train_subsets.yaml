@@ -107,7 +107,7 @@ min_intensity: 0.01
 # Max absolute m/z difference allowed when removing the precursor peak.
 remove_precursor_tol: 2.0  # Da
 # Max precursor charge allowed, spectra with larger charge are skipped.
-max_charge: 4
+max_charge: 5
 
 # MODEL ARCHITECTURE OPTIONS
 # Dimensionality of latent representations, i.e. peak embeddings.
@@ -137,7 +137,7 @@ train_label_smoothing: 0.01
 # Number of spectra in one training batch.
 train_batch_size: 32
 # Max number of training epochs.
-max_epochs: 30
+max_epochs: 3
 # Shuffle dataset during training.
 shuffle: true
 # Number of samples to buffer while randomly shuffling the training data.
@@ -158,7 +158,7 @@ gradient_clip_algorithm:
 # Floating point precision.
 # Must be one of: "16-true", "16-mixed", "bf16-true", "bf16-mixed", "32-true",
 # "64-true", "64", "32", "16", or "bf16".
-precision: "32-true"
+precision: "16-mixed"
 
 # Replace I by L in peptide sequences.
 replace_isoleucine_with_leucine: true
