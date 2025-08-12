@@ -15,7 +15,11 @@ import torch
 import torch.utils.data
 from depthcharge.tokenizers import PeptideTokenizer
 from depthcharge.tokenizers.peptides import MskbPeptideTokenizer
-from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
+from lightning.pytorch.callbacks import (
+    LearningRateMonitor,
+    ModelCheckpoint,
+    EarlyStopping,
+)
 from lightning.pytorch.strategies import DDPStrategy
 from torch.utils.data import DataLoader
 
@@ -380,6 +384,18 @@ class ModelRunner:
                                 log_momentum=True, log_weight_decay=True
                             ),
                         )
+
+            # For now, hardcoded on a patience of 50K steps. TODO: Add this to the config
+            patience = 50000 // self.config.val_check_interval
+
+            self.callbacks.append(
+                EarlyStopping(
+                    monitor="valid_CELoss",
+                    patience=patience,
+                    verbose=True,
+                    mode="min",
+                )
+            )
 
             additional_cfg = dict(
                 devices=devices,
