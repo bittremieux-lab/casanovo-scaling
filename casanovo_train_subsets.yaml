@@ -137,7 +137,7 @@ train_label_smoothing: 0.01
 # Number of spectra in one training batch.
 train_batch_size: 32
 # Max number of training epochs.
-max_epochs: 3
+max_epochs: -1
 # Shuffle dataset during training.
 shuffle: true
 # Number of samples to buffer while randomly shuffling the training data.
