@@ -18,13 +18,13 @@ $TRAIN_FILE \
 casanovo sequence -e \
 $VAL_FILE \
 --config casanovo_train_subsets.yaml \
---model train.best.ckpt \
+--model ${OUTPUT_DIR}/train.best.ckpt \
 -d $OUTPUT_DIR \
 -o validation
 
 casanovo sequence -e \
 $TEST_FILE \
 --config casanovo_train_subsets.yaml \
---model train.best.ckpt \
+--model ${OUTPUT_DIR}/train.best.ckpt \
 -d $OUTPUT_DIR \
 -o test
