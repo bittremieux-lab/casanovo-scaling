@@ -182,7 +182,7 @@ def sequence(
 
     if not force_overwrite:
         utils.check_dir_file_exists(output_path, f"{output_root}.mztab")
-        
+
     config, model = setup_model(
         model, config, output_path, output_root_name, False
     )

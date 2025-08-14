@@ -13,18 +13,21 @@ $TRAIN_FILE \
 --validation_peak_path $VAL_FILE \
 --config casanovo_train_subsets.yaml \
 -d $OUTPUT_DIR \
--o train
+-o train \
+-f
 
 casanovo sequence -e \
 $VAL_FILE \
 --config casanovo_train_subsets_sequence.yaml \
---model ${OUTPUT_DIR}/train.best.ckpt \
+--model ${OUTPUT_DIR}train.best.ckpt \
 -d $OUTPUT_DIR \
--o validation
+-o validation \
+-f
 
 casanovo sequence -e \
 $TEST_FILE \
 --config casanovo_train_subsets_sequence.yaml \
---model ${OUTPUT_DIR}/train.best.ckpt \
+--model ${OUTPUT_DIR}train.best.ckpt \
 -d $OUTPUT_DIR \
--o test
+-o test \
+-f
