@@ -96,14 +96,13 @@ target/
 massivekb_data/C1e/
 
 logs/
+
 massivekb_data/massivekb_82c0124b_seqs.npy
-
 massivekb_data/massivekb_82c0124b.mgf
-
 massivekb_data/massivekb_dist_matrix_max_100000.npy
-
 massivekb_data/massivekb_full_split_df_max_100000.csv
-
 massivekb_data/massivekb_seqs_100000.npy
-
 massivekb_data/massivekb_split_df_max_100000.csv
+massivekb_data/scaling_data_max_100000/
+
+hpc_scripts/*/*.out
