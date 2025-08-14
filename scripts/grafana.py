@@ -43,7 +43,8 @@ def load_metrics(csv_path, keys):
     df = pd.read_csv(csv_path)
     dfs = {}
     for key in keys:
-        dfs[key] = df[df[key].notna()]
+        if key in df.columns:
+            dfs[key] = df[df[key].notna()]
     return dfs
 
 
