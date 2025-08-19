@@ -130,6 +130,12 @@ optimizer: "Adam"
 betas: [0.9, 0.999]
 # Regularization term for weight updates.
 weight_decay: 1e-5
+
+lr_scheduler: "cosinewarmup"
+pct_start:
+div_factor:
+final_div_factor:
+
 # The number of iterations for the linear warm-up of the learning rate.
 warmup_iters: 100_000
 # The number of iterations for the cosine half period of the learning rate.
@@ -145,6 +151,7 @@ train_label_smoothing: 0.01
 train_batch_size: 32
 # Max number of training epochs.
 max_epochs: 30
+max_steps:
 # Shuffle dataset during training.
 shuffle: true
 # Number of samples to buffer while randomly shuffling the training data.

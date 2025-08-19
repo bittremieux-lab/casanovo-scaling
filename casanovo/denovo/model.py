@@ -12,6 +12,7 @@ import lightning.pytorch as pl
 import numpy as np
 import torch
 from depthcharge.tokenizers import PeptideTokenizer
+from torch.optim.lr_scheduler import OneCycleLR
 
 from .. import config
 from ..data import ms_io, psm
@@ -118,6 +119,11 @@ class Spec2Pep(pl.LightningModule):
         calculate_precision: bool = False,
         tokenizer: PeptideTokenizer | None = None,
         optimizer: str = "Adam",
+        lr_scheduler: str = "cosinewarmup",
+        total_steps: int = 1000,
+        pct_start: float = 0.15,
+        div_factor: float = 100,
+        final_div_factor: float = 10,
         **kwargs: Dict,
     ):
         super().__init__()
@@ -150,8 +156,16 @@ class Spec2Pep(pl.LightningModule):
         self.val_celoss = torch.nn.CrossEntropyLoss(ignore_index=ignore_index)
         # Optimizer settings.
         self.optimizer = optimizer
+
+        # LR scheduler settings
+        self.lr_scheduler = lr_scheduler
         self.warmup_iters = warmup_iters
         self.cosine_schedule_period_iters = cosine_schedule_period_iters
+        self.total_steps = total_steps
+        self.pct_start = pct_start
+        self.div_factor = div_factor
+        self.final_div_factor = final_div_factor
+
         # `kwargs` will contain additional arguments as well as
         # unrecognized arguments, including deprecated ones. Remove the
         # deprecated ones.
@@ -1318,18 +1332,40 @@ class Spec2Pep(pl.LightningModule):
             scheduler.
         """
         if self.optimizer == "Adam":
-            optimizer = torch.optim.Adam(self.parameters(), **self.opt_kwargs)
+            optimizer = torch.optim.Adam(
+                self.parameters(),
+                lr=self.opt_kwargs["lr"],
+                weight_decay=self.opt_kwargs["weight_decay"],
+            )
 
         elif self.optimizer == "AdamW":
-            optimizer = torch.optim.AdamW(self.parameters(), **self.opt_kwargs)
+            optimizer = torch.optim.AdamW(
+                self.parameters(),
+                lr=self.opt_kwargs["lr"],
+                weight_decay=self.opt_kwargs["weight_decay"],
+            )
         else:
             raise ValueError(
                 f"Optimizer {self.optimizer} is invalid. Allowed optimizer options: Adam, AdamW"
             )
         # Apply learning rate scheduler per step.
-        lr_scheduler = CosineWarmupScheduler(
-            optimizer, self.warmup_iters, self.cosine_schedule_period_iters
-        )
+        if self.lr_scheduler == "cosinewarmup":
+            lr_scheduler = CosineWarmupScheduler(
+                optimizer, self.warmup_iters, self.cosine_schedule_period_iters
+            )
+        elif self.lr_scheduler == "onecycle":
+            lr_scheduler = OneCycleLR(
+                optimizer,
+                max_lr=self.opt_kwargs["lr"],
+                total_steps=self.total_steps,
+                pct_start=self.pct_start,
+                div_factor=self.div_factor,
+                final_div_factor=self.final_div_factor,
+            )
+        else:
+            raise ValueError(
+                f"LR Scheduler {self.lr_scheduler} is invalid. Allowed lr_scheduler options: cosinewarmup, onecycle"
+            )
         return [optimizer], {"scheduler": lr_scheduler, "interval": "step"}
 
 

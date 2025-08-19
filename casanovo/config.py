@@ -91,6 +91,7 @@ class Config:
         train_label_smoothing=float,
         train_batch_size=int,
         max_epochs=int,
+        max_steps=int,
         shuffle=bool,
         shuffle_buffer_size=int,
         num_sanity_val_steps=int,
@@ -105,6 +106,10 @@ class Config:
         residues=dict,
         optimizer=str,
         betas=lambda b1_b2: (float(b1_b2[0]), float(b1_b2[1])),
+        lr_scheduler=str,
+        pct_start=float,
+        div_factor=float,
+        final_div_factor=float,
     )
 
     def __init__(self, config_file: Optional[str] = None):

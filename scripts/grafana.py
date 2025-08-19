@@ -48,7 +48,7 @@ def load_metrics(csv_path, keys):
     return dfs
 
 
-def sync_metrics(dbclient, log_dir="logs/casanovo_train_subsets/"):
+def sync_metrics(dbclient, log_dir, experiment_name, metric_keys):
     write_api = dbclient.write_api(write_options=SYNCHRONOUS)
     state = load_state()
     updated_state = {}
@@ -60,15 +60,15 @@ def sync_metrics(dbclient, log_dir="logs/casanovo_train_subsets/"):
             continue
 
         current_hash = file_hash(csv_path)
-        if state.get(run) == current_hash:
+        if state.get(os.path.join(log_dir, run)) == current_hash:
             # Skip unchanged files
-            print(f"{csv_path} unchanged, skipping")
+            print(f"{os.path.join(log_dir, run)} unchanged, skipping")
             continue
 
-        print(f"Processing {csv_path}")
+        print(f"Processing {os.path.join(log_dir, run)}")
         metrics_dfs = load_metrics(
             csv_path,
-            ["lr-Adam", "train_CELoss", "valid_CELoss"],
+            metric_keys,
         )
         points = []
         for metric_type, metric_df in metrics_dfs.items():
@@ -78,7 +78,7 @@ def sync_metrics(dbclient, log_dir="logs/casanovo_train_subsets/"):
                     seconds=int(row.step)
                 )
                 points.append(
-                    Point("step_metrics")
+                    Point(experiment_name)
                     .tag("run", run)
                     .tag("type", metric_type)
                     .field("step", row.step)
@@ -87,14 +87,32 @@ def sync_metrics(dbclient, log_dir="logs/casanovo_train_subsets/"):
                 )
         if points:
             write_api.write(
-                bucket="train_subsets", org="casanovo-scaling", record=points
+                bucket="casanovo-scaling",
+                org="casanovo-scaling",
+                record=points,
             )
 
-        updated_state[run] = current_hash
+        updated_state[os.path.join(log_dir, run)] = current_hash
 
     save_state({**state, **updated_state})
 
 
 if __name__ == "__main__":
     dbclient = setup_db()
-    sync_metrics(dbclient)
+    sync_metrics(
+        dbclient,
+        experiment_name="train_subsets",
+        log_dir="logs/casanovo_train_subsets/",
+        metric_keys=["lr-Adam", "train_CELoss", "valid_CELoss"],
+    )
+    sync_metrics(
+        dbclient,
+        experiment_name="lr_scheduler",
+        log_dir="logs/lr_scheduler/",
+        metric_keys=[
+            "lr-AdamW",
+            "lr-AdamW-momentum",
+            "train_CELoss",
+            "valid_CELoss",
+        ],
+    )

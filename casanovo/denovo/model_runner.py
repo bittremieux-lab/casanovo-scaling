@@ -200,22 +200,6 @@ class ModelRunner:
         self.initialize_data_module(train_paths, valid_paths)
         self.loaders.setup()
 
-        tuner = Tuner(self.trainer)
-        lr_finder = tuner.lr_find(
-            self.model,
-            train_dataloaders=self.loaders.train_dataloader(),
-            min_lr=1e-6,
-            early_stop_threshold=None,
-            update_attr=False,
-        )
-        # Results can be found in
-        print(lr_finder.results)
-        print(lr_finder.suggestion())
-        # Plot with
-        fig = lr_finder.plot(suggest=True)
-        fig.savefig("lr_finder.png")
-        exit()
-
         self.trainer.fit(
             self.model,
             self.loaders.train_dataloader(),
@@ -402,22 +386,41 @@ class ModelRunner:
                             ),
                         )
 
-            # For now, hardcoded on a patience of 50K steps. TODO: Add this to the config
-            patience = 50000 // self.config.val_check_interval
-
-            self.callbacks.append(
-                EarlyStopping(
-                    monitor="valid_CELoss",
-                    patience=patience,
-                    verbose=True,
-                    mode="min",
+            # # For now, hardcoded on a patience of 50K steps. TODO: Add this to the config
+            # patience = 50000 // self.config.val_check_interval
+            #
+            # self.callbacks.append(
+            #     EarlyStopping(
+            #         monitor="valid_CELoss",
+            #         patience=patience,
+            #         verbose=True,
+            #         mode="min",
+            #     )
+            # )
+            if (
+                self.config.lr_scheduler == "onecycle"
+                and self.config.max_steps in [None, -1]
+            ):
+                raise ValueError(
+                    f"max_steps cannot be -1 or None when using onecycle as lr_scheduler. "
+                    f"Please use max_steps instead of max_epochs."
                 )
-            )
+            # Set the max_epochs or max_steps, max_steps has priority
+            max_epochs, max_steps = None, -1
+            if self.config.max_steps is not None:
+                max_steps = self.config.max_steps
+            elif self.config.max_epochs is not None:
+                max_epochs = self.config.max_epochs
+            else:
+                raise RuntimeError(
+                    f"max_epochs and max_steps both None, please set one of them. Using -1 for unlimited training"
+                )
 
             additional_cfg = dict(
                 devices=devices,
                 val_check_interval=self.config.val_check_interval,
-                max_epochs=self.config.max_epochs,
+                max_steps=max_steps,
+                max_epochs=max_epochs,
                 num_sanity_val_steps=self.config.num_sanity_val_steps,
                 accumulate_grad_batches=self.config.accumulate_grad_batches,
                 gradient_clip_val=self.config.gradient_clip_val,
@@ -489,6 +492,11 @@ class ModelRunner:
             tokenizer=tokenizer,
             optimizer=self.config.optimizer,
             betas=self.config.betas,
+            lr_scheduler=self.config.lr_scheduler,
+            total_steps=self.config.max_steps,
+            pct_start=self.config.pct_start,
+            div_factor=self.config.div_factor,
+            final_div_factor=self.config.final_div_factor,
         )
 
         # Reconfigurable non-architecture related parameters for a
@@ -510,6 +518,11 @@ class ModelRunner:
             out_writer=self.writer,
             optimizer=self.config.optimizer,
             betas=self.config.betas,
+            lr_scheduler=self.config.lr_scheduler,
+            total_steps=self.config.max_steps,
+            pct_start=self.config.pct_start,
+            div_factor=self.config.div_factor,
+            final_div_factor=self.config.final_div_factor,
         )
 
         if self.model_filename is None:
