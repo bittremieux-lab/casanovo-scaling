@@ -204,12 +204,13 @@ class ModelRunner:
         lr_finder = tuner.lr_find(
             self.model,
             train_dataloaders=self.loaders.train_dataloader(),
+            min_lr=1e-6,
             early_stop_threshold=None,
             update_attr=False,
         )
         # Results can be found in
         print(lr_finder.results)
-
+        print(lr_finder.suggestion())
         # Plot with
         fig = lr_finder.plot(suggest=True)
         fig.savefig("lr_finder.png")
