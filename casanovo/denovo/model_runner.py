@@ -211,7 +211,8 @@ class ModelRunner:
         print(lr_finder.results)
 
         # Plot with
-        fig = lr_finder.plot(suggest=True, show=True)
+        fig = lr_finder.plot(suggest=True)
+        fig.savefig("lr_finder.png")
         exit()
 
         self.trainer.fit(
