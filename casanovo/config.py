@@ -103,6 +103,8 @@ class Config:
         reverse_peptides=bool,
         massivekb_tokenizer=bool,
         residues=dict,
+        optimizer=str,
+        betas=lambda b1_b2: (float(b1_b2[0]), float(b1_b2[1])),
     )
 
     def __init__(self, config_file: Optional[str] = None):

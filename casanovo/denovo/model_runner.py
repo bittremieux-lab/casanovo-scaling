@@ -21,6 +21,7 @@ from lightning.pytorch.callbacks import (
     EarlyStopping,
 )
 from lightning.pytorch.strategies import DDPStrategy
+from lightning.pytorch.tuner import Tuner
 from torch.utils.data import DataLoader
 
 from .. import utils
@@ -198,6 +199,20 @@ class ModelRunner:
         valid_paths = self._get_input_paths(valid_peak_path, True, "valid")
         self.initialize_data_module(train_paths, valid_paths)
         self.loaders.setup()
+
+        tuner = Tuner(self.trainer)
+        lr_finder = tuner.lr_find(
+            self.model,
+            train_dataloaders=self.loaders.train_dataloader(),
+            early_stop_threshold=None,
+            update_attr=False,
+        )
+        # Results can be found in
+        print(lr_finder.results)
+
+        # Plot with
+        fig = lr_finder.plot(suggest=True, show=True)
+        exit()
 
         self.trainer.fit(
             self.model,
@@ -470,6 +485,8 @@ class ModelRunner:
             calculate_precision=self.config.calculate_precision,
             out_writer=self.writer,
             tokenizer=tokenizer,
+            optimizer=self.config.optimizer,
+            betas=self.config.betas,
         )
 
         # Reconfigurable non-architecture related parameters for a
@@ -489,6 +506,8 @@ class ModelRunner:
             train_label_smoothing=self.config.train_label_smoothing,
             calculate_precision=self.config.calculate_precision,
             out_writer=self.writer,
+            optimizer=self.config.optimizer,
+            betas=self.config.betas,
         )
 
         if self.model_filename is None:

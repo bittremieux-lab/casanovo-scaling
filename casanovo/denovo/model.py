@@ -117,6 +117,7 @@ class Spec2Pep(pl.LightningModule):
         out_writer: Optional[ms_io.MztabWriter] = None,
         calculate_precision: bool = False,
         tokenizer: PeptideTokenizer | None = None,
+        optimizer: str = "Adam",
         **kwargs: Dict,
     ):
         super().__init__()
@@ -148,6 +149,7 @@ class Spec2Pep(pl.LightningModule):
         )
         self.val_celoss = torch.nn.CrossEntropyLoss(ignore_index=ignore_index)
         # Optimizer settings.
+        self.optimizer = optimizer
         self.warmup_iters = warmup_iters
         self.cosine_schedule_period_iters = cosine_schedule_period_iters
         # `kwargs` will contain additional arguments as well as
@@ -1315,7 +1317,15 @@ class Spec2Pep(pl.LightningModule):
             The initialized Adam optimizer and its learning rate
             scheduler.
         """
-        optimizer = torch.optim.Adam(self.parameters(), **self.opt_kwargs)
+        if self.optimizer == "Adam":
+            optimizer = torch.optim.Adam(self.parameters(), **self.opt_kwargs)
+
+        elif self.optimizer == "AdamW":
+            optimizer = torch.optim.AdamW(self.parameters(), **self.opt_kwargs)
+        else:
+            raise ValueError(
+                f"Optimizer {self.optimizer} is invalid. Allowed optimizer options: Adam, AdamW"
+            )
         # Apply learning rate scheduler per step.
         lr_scheduler = CosineWarmupScheduler(
             optimizer, self.warmup_iters, self.cosine_schedule_period_iters

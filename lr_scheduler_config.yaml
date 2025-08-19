@@ -125,24 +125,23 @@ dim_intensity:
 
 ## Optimizer and scheduler options
 # The optimizer that performs weight updates during training. Options are 'Adam' and 'AdamW'
-optimizer: "Adam"
+optimizer: "AdamW"
 # Coefficients used by the optimizer for computing running averages of gradient and its square.
-betas: [0.9, 0.999]
+betas: [0.9, 0.98]
 # Regularization term for weight updates.
-weight_decay: 1e-5
+weight_decay: 1e-2
 # The number of iterations for the linear warm-up of the learning rate.
 warmup_iters: 100_000
 # The number of iterations for the cosine half period of the learning rate.
 cosine_schedule_period_iters: 600_000
 # Learning rate for weight updates during training.
 learning_rate: 5e-4
-
 # Amount of label smoothing when computing the training loss.
-train_label_smoothing: 0.01
+train_label_smoothing: 0.1
 
 # TRAINING/INFERENCE OPTIONS
 # Number of spectra in one training batch.
-train_batch_size: 32
+train_batch_size: 1024
 # Max number of training epochs.
 max_epochs: 30
 # Shuffle dataset during training.
@@ -158,21 +157,21 @@ calculate_precision: false
 # Accumulates gradients over `k` batches before stepping the optimizer.
 accumulate_grad_batches: 1
 # The value at which to clip gradients. `None` disables gradient clipping.
-gradient_clip_val:
+gradient_clip_val: 1
 # The gradient clipping algorithm to use.
 # Must be one of: "value", "norm", or `None`.
-gradient_clip_algorithm:
+gradient_clip_algorithm: norm
 # Floating point precision.
 # Must be one of: "16-true", "16-mixed", "bf16-true", "bf16-mixed", "32-true",
 # "64-true", "64", "32", "16", or "bf16".
-precision: "32-true"
+precision: "16-mixed"
 
 # Replace I by L in peptide sequences.
 replace_isoleucine_with_leucine: true
 # Reverse peptide sequences.
 reverse_peptides: true
 # MassIVE-KB style tokenizer, otherwise ProForma syntax.
-massivekb_tokenizer: false
+massivekb_tokenizer: true
 
 # AMINO ACID AND MODIFICATION VOCABULARY
 residues:
