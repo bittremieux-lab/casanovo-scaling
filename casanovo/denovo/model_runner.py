@@ -66,6 +66,7 @@ class ModelRunner:
         overwrite_ckpt_check: Optional[bool] = True,
     ) -> None:
         """Initialize a ModelRunner."""
+        torch.set_float32_matmul_precision("medium")
         self.config = config
         self.model_filename = model_filename
         self.output_dir = output_dir
