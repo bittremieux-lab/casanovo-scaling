@@ -16,7 +16,7 @@ with open("hpc_scripts/lr_scheduler/lr_scheduler_default.yaml", "r") as f:
 
         OUTPUT_DIR = f"logs/lr_scheduler/lr_{lr}/"
         PBS_LOG_FILE = (
-            f"{OUTPUT_DIR}pbs_{datetime.now().strftime("%Y%m%d-%H%M%S")}.out"
+            f"{OUTPUT_DIR}pbs_{datetime.now().strftime('%Y%m%d-%H%M%S')}.out"
         )
         CONFIG_FILE = f"hpc_scripts/lr_scheduler/lr_scheduler_{lr}.yaml"
 
