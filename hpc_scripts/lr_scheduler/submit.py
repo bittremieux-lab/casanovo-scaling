@@ -18,10 +18,9 @@ with open("hpc_scripts/lr_scheduler/lr_scheduler_default.yaml", "r") as f:
         PBS_LOG_FILE = (
             f"{OUTPUT_DIR}pbs_{datetime.now().strftime("%Y%m%d-%H%M%S")}.out"
         )
+        CONFIG_FILE = f"hpc_scripts/lr_scheduler/lr_scheduler_{lr}.yaml"
 
-        with open(
-            f"hpc_scripts/lr_scheduler/lr_scheduler_{lr}.yaml", "w"
-        ) as fw:
+        with open(CONFIG_FILE, "w") as fw:
             yaml.dump(config, fw)
 
         echo_command = [
@@ -46,7 +45,7 @@ with open("hpc_scripts/lr_scheduler/lr_scheduler_default.yaml", "r") as f:
             "oe",
             "hpc_scripts/lr_scheduler/lr_scheduler.pbs",
             "-v",
-            f"TRAIN_FILE={TRAIN_FILE},VAL_FILE={VAL_FILE},OUTPUT_DIR={OUTPUT_DIR}",
+            f"TRAIN_FILE={TRAIN_FILE},VAL_FILE={VAL_FILE},OUTPUT_DIR={OUTPUT_DIR},CONFIG_FILE={CONFIG_FILE}",
         ]
         result = subprocess.run(qsub_command, capture_output=True)
         print(result.stdout)
