@@ -15,6 +15,7 @@ def create_config(default_config, path, **kwargs):
 
     with open(CONFIG_FILE, "w") as fw:
         yaml.dump(config, fw)
+    return CONFIG_FILE
 
 
 with open("hpc_scripts/lr_scheduler/lr_scheduler_default.yaml", "r") as f:
@@ -26,7 +27,7 @@ pct_starts = [0.15]
 
 for lr in lrs:
     for pct_start in pct_starts:
-        create_config(
+        CONFIG_FILE = create_config(
             default_config,
             "hpc_scripts/lr_scheduler/lr_scheduler",
             lr=lr,
@@ -51,14 +52,14 @@ for lr in lrs:
         ]
         subprocess.run(echo_command, check=True)
 
-        # qsub_command = [
-        #     "qsub",
-        #     "-o",
-        #     PBS_LOG_FILE,
-        #     "-j",
-        #     "oe",
-        #     "hpc_scripts/lr_scheduler/lr_scheduler.pbs",
-        #     "-v",
-        #     f"TRAIN_FILE={TRAIN_FILE},VAL_FILE={VAL_FILE},OUTPUT_DIR={OUTPUT_DIR},CONFIG_FILE={CONFIG_FILE}",
-        # ]
-        # subprocess.run(qsub_command, check=True)
+        qsub_command = [
+            "qsub",
+            "-o",
+            PBS_LOG_FILE,
+            "-j",
+            "oe",
+            "hpc_scripts/lr_scheduler/lr_scheduler.pbs",
+            "-v",
+            f"TRAIN_FILE={TRAIN_FILE},VAL_FILE={VAL_FILE},OUTPUT_DIR={OUTPUT_DIR},CONFIG_FILE={CONFIG_FILE}",
+        ]
+        subprocess.run(qsub_command, check=True)
