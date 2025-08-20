@@ -2,6 +2,7 @@ import datetime
 import hashlib
 import json
 import os
+import subprocess
 
 import pandas as pd
 from influxdb_client import InfluxDBClient, Point
@@ -97,7 +98,26 @@ def sync_metrics(dbclient, log_dir, experiment_name, metric_keys):
     save_state({**state, **updated_state})
 
 
+def sync_logs(
+    remote="vsc20683@tier1.hpc.ugent.be:/dodrio/scratch/projects/2025_048/casanovo-scaling/logs/",
+    local="/home/pigeonmark/Documents/casanovo-scaling/logs/",
+    exclude="*.ckpt",
+):
+    rsync_command = [
+        "rsync",
+        "-avz",
+        "--update",
+        f"--exclude={exclude}",
+        remote,
+        local,
+    ]
+    print("Running rsync to sync logs. This may take a while...")
+    subprocess.run(rsync_command, check=True)
+    print("Sync complete.")
+
+
 if __name__ == "__main__":
+    sync_logs()
     dbclient = setup_db()
     sync_metrics(
         dbclient,
