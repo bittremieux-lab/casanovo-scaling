@@ -18,7 +18,7 @@ def create_config(experiment, default_config, **kwargs):
     config = copy.deepcopy(default_config)
     config.update(kwargs)
 
-    parameter_str = ",".join([f"{k}={v}" for k, v in kwargs.items()])
+    parameter_str = "+".join([f"{k}@{v}" for k, v in kwargs.items()])
     new_config_path = os.path.join(
         "hpc_scripts", experiment, f"{parameter_str}.yaml"
     )
