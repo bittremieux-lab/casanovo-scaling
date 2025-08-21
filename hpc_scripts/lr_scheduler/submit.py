@@ -30,7 +30,7 @@ for lr in lrs:
         CONFIG_FILE = create_config(
             default_config,
             "hpc_scripts/lr_scheduler/lr_scheduler",
-            lr=lr,
+            learning_rate=lr,
             pct_start=pct_start,
         )
 
