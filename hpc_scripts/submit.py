@@ -75,7 +75,7 @@ def submit_commands(
 
 if __name__ == "__main__":
     train_file = "massivekb_data/scaling_data_max_100000/train_2s_1000000p.mgf"
-    val_file = "massivekb_data/scaling_data_max_100000/val.mgf"
+    val_file = "massivekb_data/scaling_data_max_100000/val_0.25.mgf"
 
     submit_commands(
         experiment="lr_scheduler",

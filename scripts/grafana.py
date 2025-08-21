@@ -132,7 +132,7 @@ if __name__ == "__main__":
         metric_keys=[
             "lr-AdamW",
             "lr-AdamW-momentum",
-            "train_CELoss",
+            "train_CELoss_step",
             "valid_CELoss",
         ],
     )
