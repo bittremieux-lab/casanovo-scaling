@@ -54,6 +54,7 @@ def submit_commands(
             "TRAIN_FILE": train_file,
             "VAL_FILE": val_file,
             "OUTPUT_DIR": output_dir,
+            "CONFIG_FILE": new_config_path,
         }
 
         command = [
