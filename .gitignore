@@ -106,3 +106,7 @@ massivekb_data/massivekb_split_df_max_100000.csv
 massivekb_data/scaling_data_max_100000/
 
 hpc_scripts/*/*.out
+
+hpc_scripts/lr_scheduler/*.yaml
+!hpc_scripts/lr_scheduler/default.yaml
+lr_finder.png
