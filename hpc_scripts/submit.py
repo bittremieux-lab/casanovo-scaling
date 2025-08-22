@@ -82,8 +82,9 @@ if __name__ == "__main__":
         train_file=train_file,
         val_file=val_file,
         exclude=[
-            {"learning_rate": 1e-4, "pct_start": 0.3},
+            {"learning_rate": 0.001, "pct_start": 0.3},
+            {"learning_rate": 0.002, "pct_start": 0.3},
         ],
-        learning_rate=[1e-4, 3e-4, 1e-3],
-        pct_start=[0.15, 0.3],
+        learning_rate=[0.0003, 0.0006, 0.001, 0.0015, 0.002],
+        pct_start=[0.3, 0.4],
     )
