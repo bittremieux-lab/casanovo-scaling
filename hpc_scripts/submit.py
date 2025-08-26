@@ -4,6 +4,7 @@ import os
 import subprocess
 from datetime import datetime
 
+import pandas as pd
 import yaml
 
 
@@ -28,7 +29,7 @@ def create_config(experiment, default_config, **kwargs):
     return new_config_path, parameter_str
 
 
-def submit_commands(
+def submit_grid_commands(
     experiment, train_file, val_file, exclude=None, echo_only=False, **kwargs
 ):
     default_config = get_default_config(experiment)
@@ -73,18 +74,70 @@ def submit_commands(
             subprocess.run(command, check=True)
 
 
+def submit_hpt_commands(
+    experiment, train_file, val_file, hpt_ids, echo_only=False
+):
+    default_config = get_default_config(experiment)
+    pbs_file = os.path.join("hpc_scripts", experiment, f"{experiment}.pbs")
+    hpt_file = os.path.join("hpt", experiment, f"configurations.csv")
+    hpt_df = pd.read_csv(hpt_file, index_col=0)
+
+    for hpt_id in hpt_ids:
+        param_combination = hpt_df.loc[hpt_id]
+        param_combination = param_combination.to_dict()
+        param_combination.pop("log_dir")
+        param_combination.pop("valid_CELoss")
+
+        new_config_path, parameter_str = create_config(
+            experiment, default_config, **param_combination
+        )
+
+        output_dir = os.path.join("logs", experiment, parameter_str)
+        pbs_log_file = os.path.join(
+            output_dir, f"pbs_{datetime.now().strftime('%Y%m%d-%H%M%S')}.out"
+        )
+
+        env_vars = {
+            "TRAIN_FILE": train_file,
+            "VAL_FILE": val_file,
+            "OUTPUT_DIR": output_dir,
+            "CONFIG_FILE": new_config_path,
+        }
+
+        command = [
+            "qsub",
+            "-o",
+            pbs_log_file,
+            "-j",
+            "oe",
+            pbs_file,
+            "-v",
+            ",".join(f"{k}={v}" for k, v in env_vars.items()),
+        ]
+
+        subprocess.run(["echo"] + command, check=True)
+        if not echo_only:
+            subprocess.run(command, check=True)
+
+
 if __name__ == "__main__":
     train_file = "massivekb_data/scaling_data_max_100000/train_2s_1000000p.mgf"
     val_file = "massivekb_data/scaling_data_max_100000/val_0.25.mgf"
 
-    submit_commands(
+    # submit_grid_commands(
+    #     experiment="lr_scheduler",
+    #     train_file=train_file,
+    #     val_file=val_file,
+    #     exclude=[
+    #         {"learning_rate": 0.001, "pct_start": 0.3},
+    #         {"learning_rate": 0.002, "pct_start": 0.3},
+    #     ],
+    #     learning_rate=[0.0003, 0.0006, 0.001, 0.0015, 0.002],
+    #     pct_start=[0.3, 0.4],
+    # )
+    submit_hpt_commands(
         experiment="lr_scheduler",
         train_file=train_file,
         val_file=val_file,
-        exclude=[
-            {"learning_rate": 0.001, "pct_start": 0.3},
-            {"learning_rate": 0.002, "pct_start": 0.3},
-        ],
-        learning_rate=[0.0003, 0.0006, 0.001, 0.0015, 0.002],
-        pct_start=[0.3, 0.4],
+        hpt_ids=[16, 17, 18, 19, 20],
     )
