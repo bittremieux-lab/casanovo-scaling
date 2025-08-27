@@ -11,9 +11,6 @@ from scripts.grafana import load_metrics
 def load_past_results(
     name: str, parameters: list, loss_key: str = "valid_CELoss"
 ):
-    # We want 2 things:
-    # Open past HPT configs and load their losses if not yet there
-    # Look for valid runs not in the config and add them
     hpt_dir = os.path.join("hpt", name)
     log_dir = os.path.join("logs", name)
 
@@ -22,14 +19,7 @@ def load_past_results(
         config_df = pd.read_csv(
             os.path.join(hpt_dir, "configurations.csv"), index_col=0
         )
-        unfilled_results = config_df[config_df[loss_key].isnull()]
-        print(
-            f"Found {len(config_df)} configurations in {os.path.join(hpt_dir, "configurations.csv")}"
-        )
-        print(f"{len(unfilled_results)} of them without loss")
-        for i, log_run_dir in zip(
-            unfilled_results.index, unfilled_results.log_dir
-        ):
+        for i, log_run_dir in zip(config_df.index, config_df.log_dir):
             csv_path = os.path.join(log_run_dir, "csv_logs", "metrics.csv")
             if not os.path.exists(csv_path):
                 print(f"Could not find {csv_path}")
@@ -41,10 +31,6 @@ def load_past_results(
             )[loss_key]
             min_loss = loss_df[loss_key].min()
             config_df.loc[i, loss_key] = min_loss
-
-        print(
-            f"Added loss of {len(unfilled_results) - len(config_df[config_df[loss_key].isnull()])} configurations"
-        )
 
     else:
         config_df = pd.DataFrame(columns=parameters + [loss_key, "log_dir"])
@@ -151,6 +137,6 @@ if __name__ == "__main__":
             "learning_rate": (1e-6, 1e-2),
             "pct_start": (0, 0.9),
         },
-        n_initial_points=4,
+        n_initial_points=5,
         n_ask_points=5,
     )
