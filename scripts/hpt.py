@@ -1,6 +1,7 @@
 import os
 from collections import defaultdict
 
+import numpy as np
 import pandas as pd
 from skopt import Optimizer
 
@@ -115,6 +116,11 @@ def hpt(
         optimizer.tell(parameters, getattr(seen_config, loss_key))
 
     new_configs = optimizer.ask(n_points=n_ask_points)
+    new_configs = [
+        [round(p, 8) if isinstance(p, (float, np.floating)) else p for p in c]
+        for c in new_configs
+    ]
+
     to_add = {
         p: [c[i] for c in new_configs]
         for i, p in enumerate(parameter_ranges.keys())

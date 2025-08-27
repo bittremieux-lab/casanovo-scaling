@@ -139,5 +139,5 @@ if __name__ == "__main__":
         experiment="lr_scheduler",
         train_file=train_file,
         val_file=val_file,
-        hpt_ids=[16, 17, 18, 19, 20],
+        hpt_ids=range(21, 26),
     )
