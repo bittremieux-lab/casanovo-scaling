@@ -124,15 +124,11 @@ if __name__ == "__main__":
         experiment="steps",
         train_file=train_file,
         val_file=val_file,
-        exclude=[
-            # {"learning_rate": 0.001, "pct_start": 0.3},
-            # {"learning_rate": 0.002, "pct_start": 0.3},
-        ],
         max_steps=[40000, 95000, 150000, 205000],
     )
-    submit_hpt_commands(
-        experiment="lr_scheduler",
-        train_file=train_file,
-        val_file=val_file,
-        hpt_ids=range(21, 26),
-    )
+    # submit_hpt_commands(
+    #     experiment="lr_scheduler",
+    #     train_file=train_file,
+    #     val_file=val_file,
+    #     hpt_ids=range(21, 26),
+    # )
