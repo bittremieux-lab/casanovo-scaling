@@ -148,7 +148,7 @@ train_label_smoothing: 0.01
 
 # TRAINING/INFERENCE OPTIONS
 # Number of spectra in one training batch.
-global_train_batch_size: 1024
+train_batch_size: 1024
 # Max number of training epochs.
 max_epochs:
 max_steps: 60000
