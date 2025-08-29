@@ -163,7 +163,7 @@ num_sanity_val_steps: 0
 calculate_precision: false
 
 # Accumulates gradients over `k` batches before stepping the optimizer.
-accumulate_grad_batches:
+accumulate_grad_batches: 1
 # The value at which to clip gradients. `None` disables gradient clipping.
 gradient_clip_val:
 # The gradient clipping algorithm to use.

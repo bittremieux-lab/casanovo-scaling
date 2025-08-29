@@ -336,6 +336,72 @@ def train(
         utils.log_run_report(start_time=start_time, end_time=time.time())
 
 
+@main.command(cls=_SharedParams)
+@click.argument(
+    "train_peak_path",
+    required=True,
+    nargs=-1,
+    type=click.Path(exists=True, dir_okay=True),
+)
+@click.option(
+    "-p",
+    "--validation_peak_path",
+    help="""
+    An annotated MGF file for validation, like from MassIVE-KB. Use this
+    option multiple times to specify multiple files.
+    """,
+    required=False,
+    multiple=True,
+    type=click.Path(exists=True, dir_okay=True),
+)
+def determine_max_batch_size(
+    train_peak_path: Tuple[str],
+    validation_peak_path: Optional[Tuple[str]],
+    model: Optional[str],
+    config: Optional[str],
+    output_dir: Optional[str],
+    output_root: Optional[str],
+    verbosity: str,
+    force_overwrite: bool,
+) -> None:
+    """Determine the maximum batch size for a Casanovo model.
+
+    TRAIN_PEAK_PATH must be one or more annoated MGF files, such as
+    those provided by MassIVE-KB.
+    """
+    output_path, output_root_name = _setup_output(
+        output_dir, output_root, force_overwrite, verbosity
+    )
+
+    start_time = time.time()
+    utils.log_system_info()
+
+    config, model = setup_model(
+        model, config, output_path, output_root_name, True
+    )
+
+    with ModelRunner(
+        config,
+        model,
+        output_path,
+        output_root_name if output_root is not None else None,
+        not force_overwrite,
+    ) as runner:
+        logger.info("Determining batch size using:")
+        for peak_file in train_peak_path:
+            logger.info("  %s", peak_file)
+
+        if len(validation_peak_path) == 0:
+            validation_peak_path = train_peak_path
+
+        logger.info("Using the following validation files:")
+        for peak_file in validation_peak_path:
+            logger.info("  %s", peak_file)
+
+        runner.determine_max_batch_size(train_peak_path, validation_peak_path)
+        utils.log_run_report(start_time=start_time, end_time=time.time())
+
+
 @main.command()
 def version() -> None:
     """Get the Casanovo version information."""
