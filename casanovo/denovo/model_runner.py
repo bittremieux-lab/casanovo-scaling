@@ -12,9 +12,11 @@ from typing import Iterable, List, Optional, Sequence, Union
 import lightning.pytorch as pl
 import lightning.pytorch.loggers
 import torch
+import torch.distributed as dist
 import torch.utils.data
 from depthcharge.tokenizers import PeptideTokenizer
 from depthcharge.tokenizers.peptides import MskbPeptideTokenizer
+from lightning.fabric.utilities import rank_zero_only
 from lightning.pytorch.callbacks import (
     LearningRateMonitor,
     ModelCheckpoint,
@@ -726,12 +728,28 @@ class ModelRunner:
             )
 
         else:
-            logger.info("Finding max batch size to fit on device")
-            casa_logger = logging.getLogger("casanovo")
-            casa_level = casa_logger.level
-            casa_logger.setLevel(logging.CRITICAL)
-            max_batch_size = self.find_max_batch_size(num_devices)
-            casa_logger.setLevel(casa_level)
+            max_batch_size = None
+
+            @rank_zero_only
+            def run_finder():
+                logger.info("Finding max batch size to fit on device")
+                casa_logger = logging.getLogger("casanovo")
+                casa_level = casa_logger.level
+                casa_logger.setLevel(logging.CRITICAL)
+                max_batch_size = self.find_max_batch_size(num_devices)
+                casa_logger.setLevel(casa_level)
+                return max_batch_size
+
+            max_batch_size = run_finder()
+
+            # broadcast result to other ranks if using DDP
+            if dist.is_available() and dist.is_initialized():
+                tensor = torch.tensor(
+                    0 if max_batch_size is None else max_batch_size,
+                    device="cuda",
+                )
+                dist.broadcast(tensor, src=0)
+                max_batch_size = int(tensor.item())
 
             if max_batch_size < 1:
                 raise RuntimeError(
