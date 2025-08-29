@@ -216,7 +216,9 @@ class ModelRunner:
 
         train_paths = self._get_input_paths(train_peak_path, True, "train")
         valid_paths = self._get_input_paths(valid_peak_path, True, "valid")
-        self.initialize_data_module(train_paths, valid_paths)
+        self.initialize_data_module(
+            train_paths, valid_paths, finding_batch_size=True
+        )
         self.loaders.setup()
 
         max_batch_size, accumulate_grad_batches, num_devices = (
@@ -628,6 +630,7 @@ class ModelRunner:
         train_paths: Sequence[str] | None = None,
         valid_paths: Sequence[str] | None = None,
         test_paths: Sequence[str] | None = None,
+        finding_batch_size: bool = False,
     ) -> None:
         """Initialize the data module.
 
@@ -640,18 +643,22 @@ class ModelRunner:
         test_paths : str, optional
             Spectrum paths for evaluation or inference.
         """
-        try:
-            n_devices = self.trainer.num_devices
-            train_batch_size = (
-                self.config.global_train_batch_size
-                // n_devices
-                // self.config.accumulate_grad_batches
-            )
-            eval_batch_size = self.config.predict_batch_size // n_devices
-        except AttributeError:
-            raise RuntimeError(
-                "The trainer must be initialized prior to the data module"
-            )
+        if finding_batch_size:
+            train_batch_size = None
+            eval_batch_size = None
+        else:
+            try:
+                n_devices = self.trainer.num_devices
+                train_batch_size = (
+                    self.config.global_train_batch_size
+                    // n_devices
+                    // self.config.accumulate_grad_batches
+                )
+                eval_batch_size = self.config.predict_batch_size // n_devices
+            except AttributeError:
+                raise RuntimeError(
+                    "The trainer must be initialized prior to the data module"
+                )
 
         try:
             tokenizer = self.tokenizer
