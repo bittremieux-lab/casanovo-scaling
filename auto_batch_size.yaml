@@ -84,13 +84,13 @@ n_log: 1
 # Whether to create Tensorboard directory.
 tb_summarywriter: false
 # Whether to create csv_logs directory.
-log_metrics: false
+log_metrics: true
 # How often to log optimizer parameters in steps.
-log_every_n_steps: 50
+log_every_n_steps: 10
 # Path to save Lance instances.
 lance_dir:
 # Model validation and checkpointing frequency in training steps.
-val_check_interval: 50_000
+val_check_interval: 20
 
 # SPECTRUM PROCESSING OPTIONS
 # Minimum number of peaks for a spectrum to be considered valid.
@@ -107,7 +107,7 @@ min_intensity: 0.01
 # Max absolute m/z difference allowed when removing the precursor peak.
 remove_precursor_tol: 2.0  # Da
 # Max precursor charge allowed, spectra with larger charge are skipped.
-max_charge: 4
+max_charge: 5
 
 # MODEL ARCHITECTURE OPTIONS
 # Dimensionality of latent representations, i.e. peak embeddings.
@@ -125,61 +125,69 @@ dim_intensity:
 
 ## Optimizer and scheduler options
 # The optimizer that performs weight updates during training. Options are 'Adam' and 'AdamW'
-optimizer: "Adam"
+optimizer: "AdamW"
 # Coefficients used by the optimizer for computing running averages of gradient and its square.
-betas: [0.9, 0.999]
+betas: [0.9, 0.98]
 # Regularization term for weight updates.
-weight_decay: 1e-5
+weight_decay: 1e-2
 
-lr_scheduler: "cosinewarmup"
-pct_start:
-div_factor:
-final_div_factor:
+lr_scheduler: "onecycle"
+pct_start: 0.3
+div_factor: 10
+final_div_factor: 1000
+# anneal_strategy: cos
+# cycle_momentum: true
+# base_momentum: 0.85
+# max_momentum: 0.95
+# three_phase: false
+
 
 # The number of iterations for the linear warm-up of the learning rate.
-warmup_iters: 100_000
+warmup_iters:
 # The number of iterations for the cosine half period of the learning rate.
 cosine_schedule_period_iters: 600_000
 # Learning rate for weight updates during training.
-learning_rate: 5e-4
-
+learning_rate: 1e-4
 # Amount of label smoothing when computing the training loss.
-train_label_smoothing: 0.01
+train_label_smoothing: 0.1
 
 # TRAINING/INFERENCE OPTIONS
-# Number of spectra in one training batch.
-global_train_batch_size: 32
+# Number of spectra in one training batch over which an optimization step will be done.
+# This will be divided over the number of devices (in case of multi-GPU training) and by the number of accumulate_grad_batches
+# Make sure it is divisible by the number of GPU devices used
+global_train_batch_size: 1024
+# Accumulates gradients over `k` batches before stepping the optimizer.
+# If left empty, will be automatically determined based on the available (GPU) memory
+accumulate_grad_batches:
 # Max number of training epochs.
-max_epochs: 30
-max_steps:
+max_epochs:
+max_steps: 400
 # Shuffle dataset during training.
-shuffle: true
+shuffle: false
 # Number of samples to buffer while randomly shuffling the training data.
-shuffle_buffer_size: 10_000
+shuffle_buffer_size: 100_000
 # Number of validation steps to run before training begins.
 num_sanity_val_steps: 0
 # Calculate peptide and amino acid precision during training.
 # This is expensive, so we recommend against it.
 calculate_precision: false
 
-# Accumulates gradients over `k` batches before stepping the optimizer.
-accumulate_grad_batches:
 # The value at which to clip gradients. `None` disables gradient clipping.
-gradient_clip_val:
+gradient_clip_val: 1
 # The gradient clipping algorithm to use.
 # Must be one of: "value", "norm", or `None`.
-gradient_clip_algorithm:
+gradient_clip_algorithm: norm
 # Floating point precision.
 # Must be one of: "16-true", "16-mixed", "bf16-true", "bf16-mixed", "32-true",
 # "64-true", "64", "32", "16", or "bf16".
-precision: "32-true"
+precision: "16-mixed"
 
 # Replace I by L in peptide sequences.
 replace_isoleucine_with_leucine: true
 # Reverse peptide sequences.
 reverse_peptides: true
 # MassIVE-KB style tokenizer, otherwise ProForma syntax.
-massivekb_tokenizer: false
+massivekb_tokenizer: true
 
 # AMINO ACID AND MODIFICATION VOCABULARY
 residues:

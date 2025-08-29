@@ -18,10 +18,8 @@ from depthcharge.tokenizers.peptides import MskbPeptideTokenizer
 from lightning.pytorch.callbacks import (
     LearningRateMonitor,
     ModelCheckpoint,
-    EarlyStopping,
 )
 from lightning.pytorch.strategies import DDPStrategy
-from lightning.pytorch.tuner import Tuner
 from torch.utils.data import DataLoader
 
 from .. import utils
@@ -30,7 +28,7 @@ from ..data import db_utils, ms_io
 from ..denovo.dataloaders import DeNovoDataModule
 from ..denovo.evaluate import aa_match_batch, aa_match_metrics
 from ..denovo.model import DbSpec2Pep, Spec2Pep
-
+from ..utils import GlobalBatchProgressBar
 
 logger = logging.getLogger("casanovo")
 
@@ -192,7 +190,7 @@ class ModelRunner:
         valid_peak_path : iterable of str
             The path to the MS data files for validation.
         """
-        self.initialize_trainer(train=True)
+        # self.initialize_trainer(train=True)
         self.initialize_tokenizer()
         self.initialize_model(train=True)
 
@@ -200,6 +198,10 @@ class ModelRunner:
         valid_paths = self._get_input_paths(valid_peak_path, True, "valid")
         self.initialize_data_module(train_paths, valid_paths)
         self.loaders.setup()
+
+        self.setup_batch_size()
+
+        self.initialize_trainer(train=True)
 
         self.trainer.fit(
             self.model,
@@ -426,7 +428,7 @@ class ModelRunner:
                 accumulate_grad_batches=self.config.accumulate_grad_batches,
                 gradient_clip_val=self.config.gradient_clip_val,
                 gradient_clip_algorithm=self.config.gradient_clip_algorithm,
-                callbacks=self.callbacks,
+                callbacks=self.callbacks + [GlobalBatchProgressBar()],
                 check_val_every_n_epoch=None,
                 enable_checkpointing=True,
                 logger=loggers,
@@ -603,14 +605,14 @@ class ModelRunner:
         test_paths : str, optional
             Spectrum paths for evaluation or inference.
         """
-        try:
-            n_devices = self.trainer.num_devices
-            train_batch_size = self.config.train_batch_size // n_devices
-            eval_batch_size = self.config.predict_batch_size // n_devices
-        except AttributeError:
-            raise RuntimeError(
-                "The trainer must be initialized prior to the data module"
-            )
+        # try:
+        #     n_devices = self.trainer.num_devices
+        #     train_batch_size = self.config.global_train_batch_size // n_devices
+        #     eval_batch_size = self.config.predict_batch_size // n_devices
+        # except AttributeError:
+        #     raise RuntimeError(
+        #         "The trainer must be initialized prior to the data module"
+        #     )
 
         try:
             tokenizer = self.tokenizer
@@ -628,8 +630,8 @@ class ModelRunner:
             train_paths=train_paths,
             valid_paths=valid_paths,
             test_paths=test_paths,
-            train_batch_size=train_batch_size,
-            eval_batch_size=eval_batch_size,
+            train_batch_size=None,
+            eval_batch_size=None,
             min_peaks=self.config.min_peaks,
             max_peaks=self.config.max_peaks,
             min_mz=self.config.min_mz,
@@ -707,6 +709,124 @@ class ModelRunner:
             return DDPStrategy(find_unused_parameters=False, static_graph=True)
         else:
             return "auto"
+
+    def setup_batch_size(self):
+        # TODO:
+        # Then check accelerator used. If CPU, do not set devices to 1 during test?
+
+        pl_logger = logging.getLogger("lightning.pytorch.utilities.rank_zero")
+        pl_level = pl_logger.level
+        pl_logger.setLevel(logging.CRITICAL)
+
+        num_devices = self.get_num_devices()
+
+        if self.config.accumulate_grad_batches is not None:
+            max_batch_size = self.config.global_train_batch_size // (
+                self.config.accumulate_grad_batches * num_devices
+            )
+
+        else:
+            logger.info("Finding max batch size to fit on device")
+            casa_logger = logging.getLogger("casanovo")
+            casa_level = casa_logger.level
+            casa_logger.setLevel(logging.CRITICAL)
+            max_batch_size = self.find_max_batch_size(num_devices)
+            casa_logger.setLevel(casa_level)
+
+            if max_batch_size < 1:
+                raise RuntimeError(
+                    "Max train batch size found was less than 1. Decrease predict_batch_size or use a device with more memory."
+                )
+
+            self.config.accumulate_grad_batches = (
+                self.config.global_train_batch_size
+                // (max_batch_size * num_devices)
+            )
+            logger.info(
+                f"Batch size finder set accumulate_grad_batches: {self.config.accumulate_grad_batches}"
+            )
+
+        self.config.val_check_interval *= (
+            self.config.accumulate_grad_batches * num_devices
+        )
+
+        self.loaders.train_dataset.batch_size = max_batch_size
+        logger.info(
+            f"Batch size finder set train dataset batch size: {max_batch_size}"
+        )
+
+        if self.loaders.valid_dataset is not None:
+            self.loaders.valid_dataset.batch_size = (
+                self.config.predict_batch_size // num_devices
+            )
+            logger.info(
+                f"Batch size finder set validation dataset batch size: {self.loaders.valid_dataset.batch_size}"
+            )
+
+        if self.loaders.test_dataset is not None:
+            self.loaders.test_dataset.batch_size = (
+                self.config.predict_batch_size // num_devices
+            )
+            logger.info(
+                f"Batch size finder set test dataset batch size: {self.loaders.test_dataset.batch_size}"
+            )
+
+        logger.info(
+            f"Batch size finder set val_check_interval: {self.config.val_check_interval} (mini-batches)"
+        )
+
+        self.model._history = []
+        pl_logger.setLevel(pl_level)
+
+    def get_num_devices(self):
+        devices = (
+            "auto" if self.config.devices is None else self.config.devices
+        )
+
+        tmp_trainer = pl.Trainer(
+            accelerator=self.config.accelerator,
+            devices=devices,
+            logger=False,
+            enable_checkpointing=False,
+        )
+        return tmp_trainer.num_devices
+
+    def get_batch_size_finder_trainer(self):
+        finder_cfg = dict(
+            accelerator=self.config.accelerator,
+            devices=1,
+            precision=self.config.precision,
+            max_steps=5,
+            val_check_interval=5,
+            limit_val_batches=2,
+            num_sanity_val_steps=0,
+            enable_checkpointing=False,
+            logger=False,
+            enable_progress_bar=False,
+            enable_model_summary=False,
+        )
+        return pl.Trainer(**finder_cfg)
+
+    def find_max_batch_size(self, num_devices) -> int:
+        finder_dataloader = self.loaders.train_dataloader()
+        val_loader = None
+
+        if self.loaders.valid_dataset is not None:
+            val_loader = self.loaders.val_dataloader()
+
+        batch_size = 1
+        while True:
+            finder_trainer = self.get_batch_size_finder_trainer()
+            finder_dataloader.dataset.batch_size = batch_size
+            if val_loader is not None:
+                val_loader.dataset.batch_size = max(
+                    1, self.config.predict_batch_size // num_devices
+                )
+            try:
+                finder_trainer.fit(self.model, finder_dataloader, val_loader)
+            except torch.OutOfMemoryError:
+                return batch_size // 2
+            batch_size *= 2
 
 
 def _get_peak_filenames(

@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 import psutil
 import torch
+from lightning.pytorch.callbacks import TQDMProgressBar
 
 from . import __version__
 from .data.psm import PepSpecMatch
@@ -265,3 +266,23 @@ def check_dir_file_exists(
                 f"File matching wildcard pattern {pattern} already exist in "
                 f"{dir} and can not be overwritten."
             )
+
+
+class GlobalBatchProgressBar(TQDMProgressBar):
+    def init_train_tqdm(self):
+        bar = super().init_train_tqdm()
+        # override bar description
+        bar.set_description("Global Step")
+        return bar
+
+    def on_train_batch_end(
+        self, trainer, pl_module, outputs, batch, batch_idx
+    ):
+        # compute effective global step = optimizer updates
+        global_step = trainer.global_step
+        max_steps = trainer.max_steps
+        bar = self.train_progress_bar
+        if bar:
+            bar.n = global_step
+            bar.total = max_steps
+            bar.refresh()
