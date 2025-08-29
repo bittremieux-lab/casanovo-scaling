@@ -28,7 +28,7 @@ from ..data import db_utils, ms_io
 from ..denovo.dataloaders import DeNovoDataModule
 from ..denovo.evaluate import aa_match_batch, aa_match_metrics
 from ..denovo.model import DbSpec2Pep, Spec2Pep
-from ..utils import GlobalBatchProgressBar
+from ..utils import GlobalBatchProgressBar, divisors
 
 logger = logging.getLogger("casanovo")
 
@@ -809,13 +809,19 @@ class ModelRunner:
 
     def find_max_batch_size(self, num_devices) -> int:
         finder_dataloader = self.loaders.train_dataloader()
-        val_loader = None
 
+        val_loader = None
         if self.loaders.valid_dataset is not None:
             val_loader = self.loaders.val_dataloader()
 
-        batch_size = 1
-        while True:
+        # We try all divisors of global_train_batch_size // num_devices as potential accumulate_grad_batch values
+        divs = list(
+            divisors(self.config.global_train_batch_size // num_devices)
+        )
+        for i, d in enumerate(divs):
+            batch_size = self.config.global_train_batch_size // (
+                num_devices * d
+            )
             finder_trainer = self.get_batch_size_finder_trainer()
             finder_dataloader.dataset.batch_size = batch_size
             if val_loader is not None:
@@ -824,9 +830,23 @@ class ModelRunner:
                 )
             try:
                 finder_trainer.fit(self.model, finder_dataloader, val_loader)
+                print(f"Batch size {batch_size} fit")
             except torch.OutOfMemoryError:
-                return batch_size // 2
-            batch_size *= 2
+                if i == 0:
+                    raise RuntimeError(
+                        "Max train batch size found was less than 1. Decrease predict_batch_size or use a device with more memory."
+                    )
+                else:
+                    print(
+                        f"Batch size {batch_size} did not fit, using {self.config.global_train_batch_size // (
+                        num_devices * divs[i - 1]
+                    )}"
+                    )
+                    return self.config.global_train_batch_size // (
+                        num_devices * divs[i - 1]
+                    )
+        print(f"Global batch size // num_devices fits, using this")
+        return self.config.global_train_batch_size // num_devices
 
 
 def _get_peak_filenames(

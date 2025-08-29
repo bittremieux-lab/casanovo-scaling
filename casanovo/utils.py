@@ -268,6 +268,15 @@ def check_dir_file_exists(
             )
 
 
+def divisors(n, reverse: bool = True) -> Iterable[int]:
+    divs = set()
+    for i in range(1, int(n**0.5) + 1):
+        if n % i == 0:
+            divs.add(i)
+            divs.add(n // i)
+    return sorted(divs, reverse=reverse)
+
+
 class GlobalBatchProgressBar(TQDMProgressBar):
     def init_train_tqdm(self):
         bar = super().init_train_tqdm()

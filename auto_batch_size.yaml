@@ -155,7 +155,7 @@ train_label_smoothing: 0.1
 # Number of spectra in one training batch over which an optimization step will be done.
 # This will be divided over the number of devices (in case of multi-GPU training) and by the number of accumulate_grad_batches
 # Make sure it is divisible by the number of GPU devices used
-global_train_batch_size: 1024
+global_train_batch_size: 6144
 # Accumulates gradients over `k` batches before stepping the optimizer.
 # If left empty, will be automatically determined based on the available (GPU) memory
 accumulate_grad_batches:
