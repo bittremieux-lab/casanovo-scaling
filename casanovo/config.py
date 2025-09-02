@@ -89,7 +89,7 @@ class Config:
         learning_rate=float,
         weight_decay=float,
         train_label_smoothing=float,
-        train_batch_size=int,
+        global_train_batch_size=int,
         max_epochs=int,
         max_steps=int,
         shuffle=bool,
