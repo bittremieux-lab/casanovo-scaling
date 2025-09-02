@@ -752,7 +752,14 @@ class ModelRunner:
         elif self.config.devices == 1:
             return "auto"
         elif torch.cuda.device_count() > 1:
-            return DDPStrategy(find_unused_parameters=False, static_graph=False)
+            if self.config.accumulate_grad_batches > 1:
+                return DDPStrategy(
+                    find_unused_parameters=False, static_graph=False
+                )
+            else:
+                return DDPStrategy(
+                    find_unused_parameters=False, static_graph=True
+                )
         else:
             return "auto"
 
