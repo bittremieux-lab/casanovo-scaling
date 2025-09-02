@@ -119,19 +119,41 @@ def sync_logs(
 if __name__ == "__main__":
     sync_logs()
     dbclient = setup_db()
+    # sync_metrics(
+    #     dbclient,
+    #     experiment_name="train_subsets",
+    #     log_dir="logs/casanovo_train_subsets/",
+    #     metric_keys=["lr-Adam", "train_CELoss", "valid_CELoss"],
+    # )
+    # sync_metrics(
+    #     dbclient,
+    #     experiment_name="lr_scheduler",
+    #     log_dir="logs/lr_scheduler/",
+    #     metric_keys=[
+    #         "lr-AdamW",
+    #         "lr-AdamW-momentum",
+    #         "train_CELoss_step",
+    #         "valid_CELoss",
+    #     ],
+    # )
     sync_metrics(
         dbclient,
-        experiment_name="train_subsets",
-        log_dir="logs/casanovo_train_subsets/",
-        metric_keys=["lr-Adam", "train_CELoss", "valid_CELoss"],
-    )
-    sync_metrics(
-        dbclient,
-        experiment_name="lr_scheduler",
-        log_dir="logs/lr_scheduler/",
+        experiment_name="steps",
+        log_dir="logs/steps/",
         metric_keys=[
             "lr-AdamW",
             "lr-AdamW-momentum",
+            "train_CELoss_step",
+            "valid_CELoss",
+        ],
+    )
+    sync_metrics(
+        dbclient,
+        experiment_name="old_optim_scheduler",
+        log_dir="logs/old_optim_scheduler/",
+        metric_keys=[
+            "lr-Adam",
+            "lr-Adam-momentum",
             "train_CELoss_step",
             "valid_CELoss",
         ],
