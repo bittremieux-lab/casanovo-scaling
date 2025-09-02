@@ -206,7 +206,7 @@ if __name__ == "__main__":
             "global_train_batch_size": {
                 "type": "exponent",
                 "base": 2,
-                "range": (4, 11),
+                "range": (4, 9),
             },
         },
         n_initial_points=15,

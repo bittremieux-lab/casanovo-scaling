@@ -120,15 +120,22 @@ if __name__ == "__main__":
     train_file = "massivekb_data/scaling_data_max_100000/train_2s_1000000p.mgf"
     val_file = "massivekb_data/scaling_data_max_100000/val_0.25.mgf"
 
-    submit_grid_commands(
-        experiment="old_optim_scheduler",
-        train_file=train_file,
-        val_file=val_file,
-        learning_rate=[1e-4, 1.6e-4, 2.5e-4, 4e-4, 6.3e-4, 1e-3],
-    )
+    # submit_grid_commands(
+    #     experiment="old_optim_scheduler",
+    #     train_file=train_file,
+    #     val_file=val_file,
+    #     learning_rate=[1e-4, 1.6e-4, 2.5e-4, 4e-4, 6.3e-4, 1e-3],
+    # )
     # submit_hpt_commands(
     #     experiment="lr_scheduler",
     #     train_file=train_file,
     #     val_file=val_file,
     #     hpt_ids=range(21, 26),
     # )
+    submit_hpt_commands(
+        experiment="bs_lr_default",
+        train_file=train_file,
+        val_file=val_file,
+        hpt_ids=range(15),
+        echo_only=True,
+    )
