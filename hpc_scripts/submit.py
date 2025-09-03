@@ -23,10 +23,13 @@ def create_config(experiment, default_config, **kwargs):
     new_config_path = os.path.join(
         "hpc_scripts", experiment, f"{parameter_str}.yaml"
     )
+    new_bs_config_path = os.path.join(
+        "hpc_scripts", experiment, f"{parameter_str}__bs.yaml"
+    )
 
     with open(new_config_path, "w") as new_conf:
         yaml.dump(config, new_conf)
-    return new_config_path, parameter_str
+    return new_config_path, new_bs_config_path, parameter_str
 
 
 def submit_job(
@@ -37,7 +40,7 @@ def submit_job(
     default_config,
     echo_only,
 ):
-    new_config_path, parameter_str = create_config(
+    new_config_path, new_bs_config_path, parameter_str = create_config(
         experiment, default_config, **param_combination
     )
 
@@ -51,6 +54,7 @@ def submit_job(
         "VAL_FILE": val_file,
         "OUTPUT_DIR": output_dir,
         "CONFIG_FILE": new_config_path,
+        "BS_CONFIG_FILE": new_bs_config_path,
     }
 
     pbs_file = os.path.join("hpc_scripts", experiment, f"{experiment}.pbs")

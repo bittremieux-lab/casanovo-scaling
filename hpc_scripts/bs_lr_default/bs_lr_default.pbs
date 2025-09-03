@@ -8,10 +8,17 @@ export PATH="$VSC_SCRATCH_PROJECTS_BASE/2025_048/miniconda3/bin:${PATH}"
 
 source activate casanovo-scaling
 
+casanovo determine-max-batch-size \
+massivekb_data/scaling_data_max_100000/bs_finder.mgf \
+--config ${CONFIG_FILE} \
+-d $OUTPUT_DIR \
+-o bs_finder \
+-f
+
 casanovo train \
 $TRAIN_FILE \
 --validation_peak_path $VAL_FILE \
---config ${CONFIG_FILE} \
+--config ${BS_CONFIG_FILE} \
 -d $OUTPUT_DIR \
 -o train \
 -f
