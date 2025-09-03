@@ -686,7 +686,7 @@ class ModelRunner:
             remove_precursor_tol=self.config.remove_precursor_tol,
             max_charge=self.config.max_charge,
             tokenizer=tokenizer,
-            shuffle=self.config.shuffle,
+            shuffle=self.config.shuffle if not finding_batch_size else False,
             shuffle_buffer_size=self.config.shuffle_buffer_size,
             n_workers=self.config.n_workers,
             lance_dir=lance_dir,
