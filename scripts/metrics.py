@@ -3,6 +3,16 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from scipy.interpolate import griddata
+
+
+def metrics_from_hpt(experiment, x, y, z, max_z=None):
+    hpt_config = pd.read_csv(
+        os.path.join("hpt", experiment, "configurations.csv")
+    )
+    if max_z is not None:
+        hpt_config[z] = hpt_config[z].clip(upper=max_z)
+    return hpt_config[x], hpt_config[y], hpt_config[z]
 
 
 def plot_training_metrics(csv_path):
@@ -107,8 +117,58 @@ def plot_train_subsets_grid(root_dir="logs/casanovo_train_subsets"):
     plt.show()
 
 
+def plot_2D_heatmap(experiment, x, y, z, from_hpt=True, max_z=None):
+    x_v, y_v, z_v = metrics_from_hpt(experiment, x, y, z, max_z)
+
+    # Transform to log space
+    logx, logy = np.log10(x_v), np.log10(y_v)
+
+    # Define margins in log space (10% of log-range)
+    margin_logx = 0.1 * (logx.max() - logx.min())
+    margin_logy = 0.1 * (logy.max() - logy.min())
+
+    # Define log grid
+    grid_logx, grid_logy = np.mgrid[
+        (logx.min() - margin_logx) : (logx.max() + margin_logx) : 200j,
+        (logy.min() - margin_logy) : (logy.max() + margin_logy) : 200j,
+    ]
+
+    # Interpolate in log space
+    grid_z = griddata(
+        (logx, logy), z_v, (grid_logx, grid_logy), method="cubic"
+    )
+
+    # Convert grid back to linear scale for plotting
+    grid_X, grid_Y = 10**grid_logx, 10**grid_logy
+
+    # Plot
+    plt.figure(figsize=(6, 5))
+    plt.pcolormesh(
+        grid_X, grid_Y, grid_z, shading="auto", cmap="viridis_r", alpha=0.7
+    )
+
+    # Scatter the actual data points
+    plt.scatter(x_v, y_v, c=z_v, cmap="viridis_r", edgecolor="k", s=100)
+
+    plt.colorbar(label=z)
+    plt.xscale("log")
+    plt.yscale("log", base=2)
+    plt.xlabel(x)
+    plt.ylabel(y)
+    # plt.title("Interpolated heatmap in log-log space")
+    plt.show()
+
+
 if __name__ == "__main__":
     # plot_training_metrics(
     #     "logs/casanovo_train_subsets/1s_100000p/csv_logs/metrics.csv"
     # )
-    plot_train_subsets_grid()
+    # plot_train_subsets_grid()
+
+    plot_2D_heatmap(
+        "bs_lr_default",
+        x="learning_rate",
+        y="global_train_batch_size",
+        z="valid_CELoss",
+        max_z=1,
+    )

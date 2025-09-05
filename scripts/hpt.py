@@ -210,5 +210,11 @@ if __name__ == "__main__":
             },
         },
         n_initial_points=15,
-        n_ask_points=15,
+        n_ask_points=5,
     )
+
+    # load_past_results(
+    #     name="bs_lr_default",
+    #     parameters=["learning_rate", "global_train_batch_size"],
+    #     loss_key="valid_CELoss",
+    # )
