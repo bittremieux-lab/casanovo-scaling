@@ -140,6 +140,5 @@ if __name__ == "__main__":
         experiment="bs_lr_default",
         train_file=train_file,
         val_file=val_file,
-        hpt_ids=range(15),
-        echo_only=True,
+        hpt_ids=range(15, 20),
     )
