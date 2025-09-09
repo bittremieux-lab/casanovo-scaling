@@ -148,6 +148,7 @@ def hpt(
     # Create optimizer and tell
     optimizer = Optimizer(
         search_space,
+        base_estimator="RF",
         n_initial_points=n_initial_points,
     )
 

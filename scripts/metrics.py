@@ -10,6 +10,7 @@ def metrics_from_hpt(experiment, x, y, z, max_z=None):
     hpt_config = pd.read_csv(
         os.path.join("hpt", experiment, "configurations.csv")
     )
+    hpt_config = hpt_config[hpt_config[z].notna()]
     if max_z is not None:
         hpt_config[z] = hpt_config[z].clip(upper=max_z)
     return hpt_config[x], hpt_config[y], hpt_config[z]
