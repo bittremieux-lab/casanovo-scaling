@@ -19,8 +19,8 @@
 17,512,0.00062523,0.2392029017210006,logs/bs_lr_default/global_train_batch_size@512+learning_rate@0.00062523
 18,512,0.0003527,0.2715842127799988,logs/bs_lr_default/global_train_batch_size@512+learning_rate@0.0003527
 19,512,0.00015619,0.3360280394554138,logs/bs_lr_default/global_train_batch_size@512+learning_rate@0.00015619
-20,64,0.00048579,,logs/bs_lr_default/global_train_batch_size@64+learning_rate@0.00048579
-21,64,0.00051028,,logs/bs_lr_default/global_train_batch_size@64+learning_rate@0.00051028
-22,16,0.00054784,,logs/bs_lr_default/global_train_batch_size@16+learning_rate@0.00054784
-23,16,0.00058747,,logs/bs_lr_default/global_train_batch_size@16+learning_rate@0.00058747
-24,32,0.00054654,,logs/bs_lr_default/global_train_batch_size@32+learning_rate@0.00054654
+20,64,0.00048579,0.2140629589557647,logs/bs_lr_default/global_train_batch_size@64+learning_rate@0.00048579
+21,64,0.00051028,0.2154924720525741,logs/bs_lr_default/global_train_batch_size@64+learning_rate@0.00051028
+22,16,0.00054784,0.2776844203472137,logs/bs_lr_default/global_train_batch_size@16+learning_rate@0.00054784
+23,16,0.00058747,0.3809418976306915,logs/bs_lr_default/global_train_batch_size@16+learning_rate@0.00058747
+24,32,0.00054654,0.2460653781890869,logs/bs_lr_default/global_train_batch_size@32+learning_rate@0.00054654

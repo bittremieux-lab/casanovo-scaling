@@ -3,7 +3,10 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib import colors
 from scipy.interpolate import griddata
+
+from scripts.hpt import load_past_results
 
 
 def metrics_from_hpt(experiment, x, y, z, max_z=None):
@@ -118,7 +121,7 @@ def plot_train_subsets_grid(root_dir="logs/casanovo_train_subsets"):
     plt.show()
 
 
-def plot_2D_heatmap(experiment, x, y, z, from_hpt=True, max_z=None):
+def plot_2D_heatmap(experiment, x, y, z, max_z=None, method="nearest"):
     x_v, y_v, z_v = metrics_from_hpt(experiment, x, y, z, max_z)
 
     # Transform to log space
@@ -135,23 +138,38 @@ def plot_2D_heatmap(experiment, x, y, z, from_hpt=True, max_z=None):
     ]
 
     # Interpolate in log space
-    grid_z = griddata(
-        (logx, logy), z_v, (grid_logx, grid_logy), method="cubic"
-    )
+    grid_z = griddata((logx, logy), z_v, (grid_logx, grid_logy), method=method)
 
     # Convert grid back to linear scale for plotting
     grid_X, grid_Y = 10**grid_logx, 10**grid_logy
 
     # Plot
     plt.figure(figsize=(6, 5))
-    plt.pcolormesh(
-        grid_X, grid_Y, grid_z, shading="auto", cmap="viridis_r", alpha=0.7
-    )
+    cmap = plt.get_cmap("viridis_r")
+    norm = colors.Normalize(vmin=z_v.min(), vmax=z_v.max())
+
+    plt.pcolormesh(grid_X, grid_Y, grid_z, shading="auto", cmap=cmap)
+
+    min_idx = np.argmin(z_v)
+    mask = np.ones_like(x_v, dtype=bool)
+    mask[min_idx] = False
 
     # Scatter the actual data points
-    plt.scatter(x_v, y_v, c=z_v, cmap="viridis_r", edgecolor="k", s=100)
+    scatter = plt.scatter(
+        x_v[mask], y_v[mask], c=z_v[mask], cmap=cmap, edgecolor="k", s=100
+    )
 
-    plt.colorbar(label=z)
+    # Highlight the minimum
+    plt.scatter(
+        x_v[min_idx],
+        y_v[min_idx],
+        c=[cmap(norm(z_v[min_idx]))],
+        edgecolor="k",
+        s=300,
+        marker="*",
+    )
+
+    plt.colorbar(scatter, label=z)
     plt.xscale("log")
     plt.yscale("log", base=2)
     plt.xlabel(x)
@@ -166,10 +184,25 @@ if __name__ == "__main__":
     # )
     # plot_train_subsets_grid()
 
+    load_past_results(
+        name="bs_lr_default",
+        parameters=["learning_rate", "global_train_batch_size"],
+        loss_key="valid_CELoss",
+    )
+
     plot_2D_heatmap(
         "bs_lr_default",
         x="learning_rate",
         y="global_train_batch_size",
         z="valid_CELoss",
         max_z=1,
+        method="nearest",
+    )
+    plot_2D_heatmap(
+        "bs_lr_default",
+        x="learning_rate",
+        y="global_train_batch_size",
+        z="valid_CELoss",
+        max_z=1,
+        method="cubic",
     )

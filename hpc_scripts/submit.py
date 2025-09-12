@@ -4,6 +4,7 @@ import os
 import subprocess
 from datetime import datetime
 
+import numpy as np
 import pandas as pd
 import yaml
 
@@ -136,9 +137,16 @@ if __name__ == "__main__":
     #     val_file=val_file,
     #     hpt_ids=range(21, 26),
     # )
-    submit_hpt_commands(
-        experiment="bs_lr_default",
+    # submit_hpt_commands(
+    #     experiment="bs_lr_default",
+    #     train_file=train_file,
+    #     val_file=val_file,
+    #     hpt_ids=range(20, 25),
+    # )
+    submit_grid_commands(
+        experiment="introducing_new",
         train_file=train_file,
         val_file=val_file,
-        hpt_ids=range(20, 25),
+        lr_scheduler=["cosinewarmup", "onecycle"],
+        learning_rate=[float(2**p) for p in np.arange(-11, -10 + 0.25, 0.25)],
     )
