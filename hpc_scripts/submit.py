@@ -147,6 +147,7 @@ if __name__ == "__main__":
         experiment="introducing_new",
         train_file=train_file,
         val_file=val_file,
-        lr_scheduler=["cosinewarmup", "onecycle"],
+        lr_scheduler=["onecycle"],
         learning_rate=[float(2**p) for p in np.arange(-11, -10 + 0.25, 0.25)],
+        cycle_momentum=[False],
     )

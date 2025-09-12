@@ -124,6 +124,7 @@ class Spec2Pep(pl.LightningModule):
         pct_start: float = 0.15,
         div_factor: float = 100,
         final_div_factor: float = 10,
+        cycle_momentum: bool = True,
         **kwargs: Dict,
     ):
         super().__init__()
@@ -165,6 +166,7 @@ class Spec2Pep(pl.LightningModule):
         self.pct_start = pct_start
         self.div_factor = div_factor
         self.final_div_factor = final_div_factor
+        self.cycle_momentum = cycle_momentum
 
         # `kwargs` will contain additional arguments as well as
         # unrecognized arguments, including deprecated ones. Remove the
@@ -1370,6 +1372,7 @@ class Spec2Pep(pl.LightningModule):
                 pct_start=self.pct_start,
                 div_factor=self.div_factor,
                 final_div_factor=self.final_div_factor,
+                cycle_momentum=self.cycle_momentum,
             )
         else:
             raise ValueError(

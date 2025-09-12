@@ -110,6 +110,7 @@ class Config:
         pct_start=float,
         div_factor=float,
         final_div_factor=float,
+        cycle_momentum=bool,
     )
 
     def __init__(self, config_file: Optional[str] = None):

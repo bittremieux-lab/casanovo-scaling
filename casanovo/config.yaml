@@ -135,6 +135,7 @@ lr_scheduler: "cosinewarmup"
 pct_start:
 div_factor:
 final_div_factor:
+cycle_momentum: true
 
 # The number of iterations for the linear warm-up of the learning rate.
 warmup_iters: 100_000
