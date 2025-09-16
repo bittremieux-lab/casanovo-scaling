@@ -537,7 +537,7 @@ class ModelRunner:
             pct_start=self.config.pct_start,
             div_factor=self.config.div_factor,
             final_div_factor=self.config.final_div_factor,
-            cycle_momentum=self.config.cycle_momentume,
+            cycle_momentum=self.config.cycle_momentum,
         )
 
         # Reconfigurable non-architecture related parameters for a
