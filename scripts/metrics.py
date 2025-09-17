@@ -19,6 +19,28 @@ def metrics_from_hpt(experiment, x, y, z, max_z=None):
     return hpt_config[x], hpt_config[y], hpt_config[z]
 
 
+def parse_dir_name(name: str) -> dict:
+    """
+    Parse directory names of the form:
+    key1@val1+key2@val2+...+keyn@valn
+
+    Returns a dict {key1: val1, key2: val2, ...}.
+    """
+    params = {}
+    parts = name.split("+")
+    for part in parts:
+        if "@" not in part:
+            continue
+        key, val = part.split("@", 1)
+        # try to cast values to float if possible
+        try:
+            val = float(val)
+        except ValueError:
+            pass
+        params[key] = val
+    return params
+
+
 def plot_training_metrics(csv_path):
     """
     Reads a CSV with columns:
@@ -121,6 +143,80 @@ def plot_train_subsets_grid(root_dir="logs/casanovo_train_subsets"):
     plt.show()
 
 
+def plot_lr_scheduler_results(root_dir="logs/introducing_new"):
+    schedulers = {}
+
+    for d in os.listdir(root_dir):
+        params = parse_dir_name(d)
+        if "learning_rate" not in params or "lr_scheduler" not in params:
+            continue
+
+        lr = params["learning_rate"]
+        scheduler = params["lr_scheduler"]
+
+        # Special case: onecycle with cycle_momentum=False
+        if (
+            scheduler == "onecycle"
+            and str(params.get("cycle_momentum", "True")).lower() == "false"
+        ):
+            scheduler_label = "onecycle (no momentum)"
+        else:
+            scheduler_label = scheduler
+
+        metrics_path = os.path.join(root_dir, d, "csv_logs", "metrics.csv")
+        if not os.path.exists(metrics_path):
+            continue
+
+        metrics_df = pd.read_csv(metrics_path)
+        if "valid_CELoss" not in metrics_df.columns:
+            continue
+
+        val = metrics_df["valid_CELoss"].min()
+        # if val > 0.6:
+        #     val = np.nan
+
+        if scheduler_label not in schedulers:
+            schedulers[scheduler_label] = {"lr": [], "loss": []}
+
+        schedulers[scheduler_label]["lr"].append(lr)
+        schedulers[scheduler_label]["loss"].append(val)
+
+    # Plot results
+    plt.figure(figsize=(7, 5))
+    for scheduler, data in schedulers.items():
+        lrs = np.array(data["lr"])
+        losses = np.array(data["loss"])
+
+        # Sort by learning rate for nicer plotting
+        order = np.argsort(lrs)
+        lrs = lrs[order]
+        losses = losses[order]
+
+        (line,) = plt.plot(lrs, losses, marker="o", label=scheduler)
+        line_color = line.get_color()
+
+        # Highlight best (lowest loss) point with open circle
+        if np.isfinite(losses).any():
+            best_idx = np.nanargmin(losses)
+            plt.scatter(
+                lrs[best_idx],
+                losses[best_idx],
+                facecolors="none",
+                edgecolors=line_color,
+                s=200,
+                linewidths=2,
+                zorder=5,
+            )
+
+    plt.xscale("log")  # log scale for LR usually makes sense
+    plt.xlabel("Learning rate")
+    plt.ylabel("Min validation loss")
+    plt.title("Validation loss vs learning rate per scheduler")
+    plt.legend(title="LR Scheduler")
+    plt.tight_layout()
+    plt.show()
+
+
 def plot_2D_heatmap(experiment, x, y, z, max_z=None, method="nearest"):
     x_v, y_v, z_v = metrics_from_hpt(experiment, x, y, z, max_z)
 
@@ -184,25 +280,26 @@ if __name__ == "__main__":
     # )
     # plot_train_subsets_grid()
 
-    load_past_results(
-        name="bs_lr_default",
-        parameters=["learning_rate", "global_train_batch_size"],
-        loss_key="valid_CELoss",
-    )
-
-    plot_2D_heatmap(
-        "bs_lr_default",
-        x="learning_rate",
-        y="global_train_batch_size",
-        z="valid_CELoss",
-        max_z=1,
-        method="nearest",
-    )
-    plot_2D_heatmap(
-        "bs_lr_default",
-        x="learning_rate",
-        y="global_train_batch_size",
-        z="valid_CELoss",
-        max_z=1,
-        method="cubic",
-    )
+    # load_past_results(
+    #     name="bs_lr_default",
+    #     parameters=["learning_rate", "global_train_batch_size"],
+    #     loss_key="valid_CELoss",
+    # )
+    #
+    # plot_2D_heatmap(
+    #     "bs_lr_default",
+    #     x="learning_rate",
+    #     y="global_train_batch_size",
+    #     z="valid_CELoss",
+    #     max_z=1,
+    #     method="nearest",
+    # )
+    # plot_2D_heatmap(
+    #     "bs_lr_default",
+    #     x="learning_rate",
+    #     y="global_train_batch_size",
+    #     z="valid_CELoss",
+    #     max_z=1,
+    #     method="cubic",
+    # )
+    plot_lr_scheduler_results()
