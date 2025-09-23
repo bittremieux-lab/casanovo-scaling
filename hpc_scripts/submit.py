@@ -143,18 +143,30 @@ if __name__ == "__main__":
     #     val_file=val_file,
     #     hpt_ids=range(20, 25),
     # )
+    # submit_grid_commands(
+    #     experiment="introducing_new",
+    #     train_file=train_file,
+    #     val_file=val_file,
+    #     lr_scheduler=["onecycle"],
+    #     learning_rate=[float(2 ** (-11.5)), float(2 ** (-11.25))],
+    #     cycle_momentum=[False],
+    # )
+    # submit_grid_commands(
+    #     experiment="introducing_new",
+    #     train_file=train_file,
+    #     val_file=val_file,
+    #     lr_scheduler=["onecycle", "cosinewarmup"],
+    #     learning_rate=[float(2 ** (-11.5)), float(2 ** (-11.25))],
+    # )
+
     submit_grid_commands(
         experiment="introducing_new",
         train_file=train_file,
         val_file=val_file,
         lr_scheduler=["onecycle"],
-        learning_rate=[float(2 ** (-11.5)), float(2 ** (-11.25))],
-        cycle_momentum=[False],
-    )
-    submit_grid_commands(
-        experiment="introducing_new",
-        train_file=train_file,
-        val_file=val_file,
-        lr_scheduler=["onecycle", "cosinewarmup"],
-        learning_rate=[float(2 ** (-11.5)), float(2 ** (-11.25))],
+        learning_rate=[
+            float(2**p) for p in np.arange(-11.25, -10.25 + 0.25, 0.25)
+        ],
+        gradient_clip_val=[0.5, 1, 2],
+        gradient_clip_algorithm=["norm"],
     )
