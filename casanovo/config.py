@@ -106,6 +106,7 @@ class Config:
         residues=dict,
         optimizer=str,
         betas=lambda b1_b2: (float(b1_b2[0]), float(b1_b2[1])),
+        optimizer_eps=float,
         lr_scheduler=str,
         pct_start=float,
         div_factor=float,
