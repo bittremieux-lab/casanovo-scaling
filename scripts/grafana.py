@@ -158,17 +158,17 @@ if __name__ == "__main__":
     #         "valid_CELoss",
     #     ],
     # )
-    sync_metrics(
-        dbclient,
-        experiment_name="bs_lr_default",
-        log_dir="logs/bs_lr_default/",
-        metric_keys=[
-            "lr-Adam",
-            "lr-Adam-momentum",
-            "train_CELoss_step",
-            "valid_CELoss",
-        ],
-    )
+    # sync_metrics(
+    #     dbclient,
+    #     experiment_name="bs_lr_default",
+    #     log_dir="logs/bs_lr_default/",
+    #     metric_keys=[
+    #         "lr-Adam",
+    #         "lr-Adam-momentum",
+    #         "train_CELoss_step",
+    #         "valid_CELoss",
+    #     ],
+    # )
 
     sync_metrics(
         dbclient,

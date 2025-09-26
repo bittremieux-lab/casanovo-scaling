@@ -217,6 +217,72 @@ def plot_lr_scheduler_results(root_dir="logs/introducing_new"):
     plt.show()
 
 
+def plot_gradient_clip_results(root_dir="logs/introducing_new"):
+    clip_groups = {}
+
+    for d in os.listdir(root_dir):
+        params = parse_dir_name(d)
+        if "learning_rate" not in params or "gradient_clip_val" not in params:
+            continue
+
+        lr = params["learning_rate"]
+        clip_val = params["gradient_clip_val"]
+
+        metrics_path = os.path.join(root_dir, d, "csv_logs", "metrics.csv")
+        if not os.path.exists(metrics_path):
+            continue
+
+        metrics_df = pd.read_csv(metrics_path)
+        if "valid_CELoss" not in metrics_df.columns:
+            continue
+
+        val = metrics_df["valid_CELoss"].min()
+        if val > 0.6:  # filter like before
+            val = np.nan
+
+        if clip_val not in clip_groups:
+            clip_groups[clip_val] = {"lr": [], "loss": []}
+
+        clip_groups[clip_val]["lr"].append(lr)
+        clip_groups[clip_val]["loss"].append(val)
+
+    # Plot results
+    plt.figure(figsize=(7, 5))
+    for clip_val, data in clip_groups.items():
+        lrs = np.array(data["lr"])
+        losses = np.array(data["loss"])
+
+        # Sort by learning rate for nicer plotting
+        order = np.argsort(lrs)
+        lrs = lrs[order]
+        losses = losses[order]
+
+        # Plot line and get its color
+        (line,) = plt.plot(lrs, losses, marker="o", label=f"clip={clip_val:g}")
+        line_color = line.get_color()
+
+        # Highlight best (lowest loss) point with open circle in same color
+        if np.isfinite(losses).any():
+            best_idx = np.nanargmin(losses)
+            plt.scatter(
+                lrs[best_idx],
+                losses[best_idx],
+                facecolors="none",
+                edgecolors=line_color,
+                s=200,
+                linewidths=2,
+                zorder=5,
+            )
+
+    plt.xscale("log")  # log scale for LR
+    plt.xlabel("Learning rate")
+    plt.ylabel("Min validation loss")
+    plt.title("Validation loss vs learning rate per gradient clip value")
+    plt.legend(title="Gradient Clip", fontsize=9)
+    plt.tight_layout()
+    plt.show()
+
+
 def plot_2D_heatmap(experiment, x, y, z, max_z=None, method="nearest"):
     x_v, y_v, z_v = metrics_from_hpt(experiment, x, y, z, max_z)
 
@@ -302,4 +368,5 @@ if __name__ == "__main__":
     #     max_z=1,
     #     method="cubic",
     # )
-    plot_lr_scheduler_results()
+    # plot_lr_scheduler_results()
+    plot_gradient_clip_results()

@@ -19,7 +19,9 @@ def get_default_config(experiment):
 def create_config(experiment, default_config, **kwargs):
     config = copy.deepcopy(default_config)
     config.update(kwargs)
-
+    for k, v in kwargs.items():
+        if hasattr(v, "__iter__"):
+            kwargs[k] = "_".join([str(w) for w in v])
     parameter_str = "+".join([f"{k}@{v}" for k, v in kwargs.items()])
     new_config_path = os.path.join(
         "hpc_scripts", experiment, f"{parameter_str}.yaml"
@@ -159,14 +161,27 @@ if __name__ == "__main__":
     #     learning_rate=[float(2 ** (-11.5)), float(2 ** (-11.25))],
     # )
 
+    # submit_grid_commands(
+    #     experiment="introducing_new",
+    #     train_file=train_file,
+    #     val_file=val_file,
+    #     lr_scheduler=["onecycle"],
+    #     learning_rate=[
+    #         float(2**p) for p in np.arange(-11.25, -10.25 + 0.25, 0.25)
+    #     ],
+    #     gradient_clip_val=[0.5, 1, 2],
+    #     gradient_clip_algorithm=["norm"],
+    # )
+
     submit_grid_commands(
-        experiment="introducing_new",
+        experiment="optimizer",
         train_file=train_file,
         val_file=val_file,
-        lr_scheduler=["onecycle"],
+        optimizer=["Adam", "AdamW"],
+        betas=[(0.9, b2) for b2 in [0.98, 0.99, 0.999]],
+        weight_decay=[0.0, 1e-6, 1e-5, 1e-4, 1e-3],
+        optimizer_eps=[1e-8],
         learning_rate=[
             float(2**p) for p in np.arange(-11.25, -10.25 + 0.25, 0.25)
         ],
-        gradient_clip_val=[0.5, 1, 2],
-        gradient_clip_algorithm=["norm"],
     )
