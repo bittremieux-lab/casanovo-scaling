@@ -20,7 +20,7 @@ def create_config(experiment, default_config, **kwargs):
     config = copy.deepcopy(default_config)
     config.update(kwargs)
     for k, v in kwargs.items():
-        if hasattr(v, "__iter__"):
+        if isinstance(v, (list, tuple, set)):
             kwargs[k] = "_".join([str(w) for w in v])
     parameter_str = "+".join([f"{k}@{v}" for k, v in kwargs.items()])
     new_config_path = os.path.join(
@@ -178,7 +178,7 @@ if __name__ == "__main__":
         train_file=train_file,
         val_file=val_file,
         optimizer=["Adam", "AdamW"],
-        betas=[(0.9, b2) for b2 in [0.98, 0.99, 0.999]],
+        betas=[[0.9, b2] for b2 in [0.98, 0.99, 0.999]],
         weight_decay=[0.0, 1e-6, 1e-5, 1e-4, 1e-3],
         optimizer_eps=[1e-8],
         learning_rate=[
