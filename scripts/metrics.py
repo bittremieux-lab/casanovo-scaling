@@ -283,6 +283,69 @@ def plot_gradient_clip_results(root_dir="logs/introducing_new"):
     plt.show()
 
 
+def load_results(root_dir: str):
+    """Load all runs into a list of dicts."""
+    results = []
+    for d in os.listdir(root_dir):
+        params = parse_dir_name(d)
+        metrics_path = os.path.join(root_dir, d, "csv_logs", "metrics.csv")
+        if not os.path.exists(metrics_path):
+            continue
+
+        metrics_df = pd.read_csv(metrics_path)
+        if "valid_CELoss" not in metrics_df.columns:
+            continue
+
+        val_loss = metrics_df["valid_CELoss"].min()
+        if val_loss > 0.6:  # ignore failed runs
+            val_loss = np.nan
+
+        params["min_val_loss"] = val_loss
+        results.append(params)
+
+    return pd.DataFrame(results)
+
+
+def plot_param_vs_lr(df, param_name: str):
+    """Plot min validation loss vs LR for each value of a given parameter."""
+    # aggregate: min loss for each (param, lr)
+    agg = (
+        df.groupby([param_name, "learning_rate"], dropna=False)["min_val_loss"]
+        .min()
+        .reset_index()
+    )
+
+    plt.figure(figsize=(7, 5))
+    for param_value, subset in agg.groupby(param_name):
+        lrs = subset["learning_rate"].to_numpy()
+        losses = subset["min_val_loss"].to_numpy()
+        order = np.argsort(lrs)
+        lrs, losses = lrs[order], losses[order]
+
+        (line,) = plt.plot(lrs, losses, marker="o", label=str(param_value))
+        color = line.get_color()
+
+        if np.isfinite(losses).any():
+            best_idx = np.nanargmin(losses)
+            plt.scatter(
+                lrs[best_idx],
+                losses[best_idx],
+                facecolors="none",
+                edgecolors=color,
+                s=200,
+                linewidths=2,
+                zorder=5,
+            )
+
+    plt.xscale("log")
+    plt.xlabel("Learning rate")
+    plt.ylabel("Min validation loss")
+    plt.title(f"Validation loss vs LR for different {param_name}")
+    plt.legend(title=param_name, fontsize=9)
+    plt.tight_layout()
+    plt.show()
+
+
 def plot_2D_heatmap(experiment, x, y, z, max_z=None, method="nearest"):
     x_v, y_v, z_v = metrics_from_hpt(experiment, x, y, z, max_z)
 
@@ -340,6 +403,21 @@ def plot_2D_heatmap(experiment, x, y, z, max_z=None, method="nearest"):
     plt.show()
 
 
+def plot_grid_search_results(root_dir="logs/optimizer", params=None):
+    if params is None:
+        params = ["betas", "optimizer", "weight_decay"]
+
+    df = load_results(root_dir)
+
+    print(f"Loaded {len(df)} runs with columns: {list(df.columns)}")
+
+    for param in params:
+        if param not in df.columns:
+            print(f"Skipping {param} — not found in directory names.")
+            continue
+        plot_param_vs_lr(df, param)
+
+
 if __name__ == "__main__":
     # plot_training_metrics(
     #     "logs/casanovo_train_subsets/1s_100000p/csv_logs/metrics.csv"
@@ -368,5 +446,9 @@ if __name__ == "__main__":
     #     max_z=1,
     #     method="cubic",
     # )
+
     # plot_lr_scheduler_results()
-    plot_gradient_clip_results()
+
+    # plot_gradient_clip_results()
+
+    plot_grid_search_results(root_dir="logs/optimizer")

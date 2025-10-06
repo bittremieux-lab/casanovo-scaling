@@ -174,12 +174,12 @@ if __name__ == "__main__":
     # )
 
     submit_grid_commands(
-        experiment="optimizer",
+        experiment="optimizer_2",
         train_file=train_file,
         val_file=val_file,
         optimizer=["Adam", "AdamW"],
         betas=[[0.9, b2] for b2 in [0.98, 0.99, 0.999]],
-        weight_decay=[0.0, 1e-6, 1e-5, 1e-4, 1e-3],
+        weight_decay=[2e-6, 1e-5, 5e-5],
         optimizer_eps=[1e-8],
         learning_rate=[
             float(2**p) for p in np.arange(-11.25, -10.25 + 0.25, 0.25)

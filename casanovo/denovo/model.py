@@ -18,7 +18,6 @@ from .. import config
 from ..data import ms_io, psm
 from ..denovo.transformers import PeptideDecoder, SpectrumEncoder
 from . import evaluate
-from ..utils import get_parameter_names
 
 logger = logging.getLogger("casanovo")
 
@@ -1342,45 +1341,22 @@ class Spec2Pep(pl.LightningModule):
             The initialized Adam optimizer and its learning rate
             scheduler.
         """
-        decay_parameters = get_parameter_names(
-            self, [torch.nn.LayerNorm, torch.nn.Embedding]
-        )
-        decay_parameters = [
-            name for name in decay_parameters if "bias" not in name
-        ]
-        optimizer_grouped_parameters = [
-            {
-                "params": [
-                    p
-                    for n, p in self.named_parameters()
-                    if n in decay_parameters
-                ],
-                "weight_decay": self.opt_kwargs["weight_decay"],
-            },
-            {
-                "params": [
-                    p
-                    for n, p in self.named_parameters()
-                    if n not in decay_parameters
-                ],
-                "weight_decay": 0.0,
-            },
-        ]
-
         if self.optimizer == "Adam":
             optimizer = torch.optim.Adam(
-                params=optimizer_grouped_parameters,
+                self.parameters(),
                 lr=self.opt_kwargs["lr"],
                 betas=self.opt_kwargs["betas"],
                 eps=self.opt_kwargs["optimizer_eps"],
+                weight_decay=self.opt_kwargs["weight_decay"],
             )
 
         elif self.optimizer == "AdamW":
             optimizer = torch.optim.AdamW(
-                params=optimizer_grouped_parameters,
+                self.parameters(),
                 lr=self.opt_kwargs["lr"],
                 betas=self.opt_kwargs["betas"],
                 eps=self.opt_kwargs["optimizer_eps"],
+                weight_decay=self.opt_kwargs["weight_decay"],
             )
         else:
             raise ValueError(

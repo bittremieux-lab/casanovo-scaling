@@ -181,3 +181,16 @@ if __name__ == "__main__":
             "valid_CELoss",
         ],
     )
+    sync_metrics(
+        dbclient,
+        experiment_name="optimizer",
+        log_dir="logs/optimizer/",
+        metric_keys=[
+            "lr-Adam",
+            "lr-AdamW",
+            "lr-Adam-momentum",
+            "lr-AdamW-momentum",
+            "train_CELoss_step",
+            "valid_CELoss",
+        ],
+    )
