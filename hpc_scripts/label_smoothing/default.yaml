@@ -130,6 +130,7 @@ optimizer: "Adam"
 betas: [0.9, 0.999]
 # Regularization term for weight updates.
 weight_decay: 1e-5
+optimizer_eps: 1e-8
 
 lr_scheduler: "onecycle"
 pct_start: 0.167
