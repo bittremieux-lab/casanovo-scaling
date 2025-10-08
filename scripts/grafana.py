@@ -170,21 +170,34 @@ if __name__ == "__main__":
     #     ],
     # )
 
+    # sync_metrics(
+    #     dbclient,
+    #     experiment_name="introducing_new",
+    #     log_dir="logs/introducing_new/",
+    #     metric_keys=[
+    #         "lr-Adam",
+    #         "lr-Adam-momentum",
+    #         "train_CELoss_step",
+    #         "valid_CELoss",
+    #     ],
+    # )
+    # sync_metrics(
+    #     dbclient,
+    #     experiment_name="optimizer",
+    #     log_dir="logs/optimizer/",
+    #     metric_keys=[
+    #         "lr-Adam",
+    #         "lr-AdamW",
+    #         "lr-Adam-momentum",
+    #         "lr-AdamW-momentum",
+    #         "train_CELoss_step",
+    #         "valid_CELoss",
+    #     ],
+    # )
     sync_metrics(
         dbclient,
-        experiment_name="introducing_new",
-        log_dir="logs/introducing_new/",
-        metric_keys=[
-            "lr-Adam",
-            "lr-Adam-momentum",
-            "train_CELoss_step",
-            "valid_CELoss",
-        ],
-    )
-    sync_metrics(
-        dbclient,
-        experiment_name="optimizer",
-        log_dir="logs/optimizer/",
+        experiment_name="optimizer_2",
+        log_dir="logs/optimizer_2/",
         metric_keys=[
             "lr-Adam",
             "lr-AdamW",

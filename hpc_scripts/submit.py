@@ -173,14 +173,24 @@ if __name__ == "__main__":
     #     gradient_clip_algorithm=["norm"],
     # )
 
+    # submit_grid_commands(
+    #     experiment="optimizer_2",
+    #     train_file=train_file,
+    #     val_file=val_file,
+    #     optimizer=["Adam", "AdamW"],
+    #     betas=[[0.9, b2] for b2 in [0.98, 0.99, 0.999]],
+    #     weight_decay=[2e-6, 1e-5, 5e-5],
+    #     optimizer_eps=[1e-8],
+    #     learning_rate=[
+    #         float(2**p) for p in np.arange(-11.25, -10.25 + 0.25, 0.25)
+    #     ],
+    # )
+
     submit_grid_commands(
-        experiment="optimizer_2",
+        experiment="label_smoothing",
         train_file=train_file,
         val_file=val_file,
-        optimizer=["Adam", "AdamW"],
-        betas=[[0.9, b2] for b2 in [0.98, 0.99, 0.999]],
-        weight_decay=[2e-6, 1e-5, 5e-5],
-        optimizer_eps=[1e-8],
+        train_label_smoothing=[0., 0.001, 0.01, 0.03, 0.05, 0.1],
         learning_rate=[
             float(2**p) for p in np.arange(-11.25, -10.25 + 0.25, 0.25)
         ],

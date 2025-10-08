@@ -451,4 +451,4 @@ if __name__ == "__main__":
 
     # plot_gradient_clip_results()
 
-    plot_grid_search_results(root_dir="logs/optimizer")
+    plot_grid_search_results(root_dir="logs/optimizer_2")
