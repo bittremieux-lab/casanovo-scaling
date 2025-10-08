@@ -1,23 +1,27 @@
 import os
+import random
+from collections import defaultdict
+from multiprocessing import cpu_count
+
+import numpy as np
 import pandas as pd
+from datasail.sail import datasail
 from pyteomics import mgf
 from tqdm import tqdm
-import numpy as np
-from datasail.sail import datasail
+
 from dist_matrix import rectangle_distance_matrix
-from multiprocessing import cpu_count
-from collections import defaultdict
-import random
 
 
 def remove_ptms(seq):
     return "".join([c for c in seq if "A" <= c <= "Z"])
 
+
 def get_train_val_test(split_df):
-    train = split_df[split_df["split"]=="train"]
-    val = split_df[split_df["split"]=="val"]
-    test = split_df[split_df["split"]=="test"]
+    train = split_df[split_df["split"] == "train"]
+    val = split_df[split_df["split"] == "val"]
+    test = split_df[split_df["split"] == "test"]
     return train, val, test
+
 
 def create_sub_mgf(mgf_file, cache_dir, num_spectra=1000):
     sub_spectra = []
@@ -58,16 +62,18 @@ def create_sequence_index(mgf_file, cache_dir=None, total=None):
             try:
                 params = spectrum["params"]
                 seq = params["seq"]
-        
-                data.append({
-                    "mgf_i": i,
-                    "sequence": seq,
-                    "unmodified_sequence": remove_ptms(seq),
-                    "title": params["title"],
-                    "charge": int(params["charge"][0]),
-                    "mass": params["pepmass"][0],
-                    "rt": params["rtinseconds"],
-                })
+
+                data.append(
+                    {
+                        "mgf_i": i,
+                        "sequence": seq,
+                        "unmodified_sequence": remove_ptms(seq),
+                        "title": params["title"],
+                        "charge": int(params["charge"][0]),
+                        "mass": params["pepmass"][0],
+                        "rt": params["rtinseconds"],
+                    }
+                )
             except KeyError as e:
                 print(spectrum["params"])
                 failed += 1
@@ -81,16 +87,25 @@ def create_sequence_index(mgf_file, cache_dir=None, total=None):
 
     return df
 
-def split_datasail(sequences, dist_matrix, splits, e_clusters=200, epsilon=0.1, threads=cpu_count(), cache_dir=None):
+
+def split_datasail(
+    sequences,
+    dist_matrix,
+    splits,
+    e_clusters=200,
+    epsilon=0.1,
+    threads=cpu_count(),
+    cache_dir=None,
+):
     n = len(sequences)
     cache_file = os.path.join(cache_dir, f"split_df_{n}.csv")
 
     if cache_dir is not None:
         if os.path.exists(cache_file):
             return pd.read_csv(cache_file)
-    
+
     e_splits, _, _ = datasail(
-        verbose='D',
+        verbose="D",
         techniques=["C1e"],
         splits=splits,
         names=["train", "val", "test"],
@@ -102,91 +117,149 @@ def split_datasail(sequences, dist_matrix, splits, e_clusters=200, epsilon=0.1, 
         e_dist=(list(range(n)), dist_matrix),
         threads=threads,
     )
-    
-    df = pd.DataFrame.from_dict(e_splits['C1e'][0], orient='index', columns=['split'])
-    df['sequence'] = sequences
+
+    df = pd.DataFrame.from_dict(
+        e_splits["C1e"][0], orient="index", columns=["split"]
+    )
+    df["sequence"] = sequences
 
     if cache_dir is not None:
         df.to_csv(cache_file, index=False)
     return df
 
-def add_all_to_split(split_df, unique_sequences, n_threads=cpu_count(), cache_dir=None):
+
+def add_all_to_split(
+    split_df, unique_sequences, n_threads=cpu_count(), cache_dir=None
+):
     cache_file = os.path.join(cache_dir, f"full_split_df_{len(split_df)}.csv")
     if cache_dir is not None:
         if os.path.exists(cache_file):
             return pd.read_csv(cache_file)
-    
-    dist_matrix = rectangle_distance_matrix(unique_sequences, split_df['sequence'].values, n_threads)
-    
+
+    dist_matrix = rectangle_distance_matrix(
+        unique_sequences, split_df["sequence"].values, n_threads
+    )
+
     nearest_indices = np.argmin(dist_matrix, axis=1)
-    split_labels = split_df['split'].values[nearest_indices]
-    
-    full_split_df = pd.DataFrame({'sequence': unique_sequences, 'split': split_labels})
+    split_labels = split_df["split"].values[nearest_indices]
+
+    full_split_df = pd.DataFrame(
+        {"sequence": unique_sequences, "split": split_labels}
+    )
 
     if cache_dir is not None:
         full_split_df.to_csv(cache_file, index=False)
     return full_split_df
 
-def create_val_test_traini(mgf_file, full_split_df, output_dir, total=None):
-    split_dict = dict(zip(full_split_df['sequence'], full_split_df['split']))
 
-    spectra = {k: [] for k in ['train', 'val', 'test']}
+def create_val_test_traini(mgf_file, full_split_df, output_dir, total=None):
+    split_dict = dict(zip(full_split_df["sequence"], full_split_df["split"]))
+
+    spectra = {k: [] for k in ["train", "val", "test"]}
     train_index = defaultdict(list)
-    with mgf.read(mgf_file, use_index=False, convert_arrays=0, read_charges=False, read_ions=False) as massivekb:
+    with mgf.read(
+        mgf_file,
+        use_index=False,
+        convert_arrays=0,
+        read_charges=False,
+        read_ions=False,
+    ) as massivekb:
         for spectrum in tqdm(massivekb, total=total):
-            unmod_pep = remove_ptms(spectrum['params']['seq'])
+            unmod_pep = remove_ptms(spectrum["params"]["seq"])
             split = split_dict[unmod_pep]
             spectra[split].append(spectrum)
-    
-            # Creating an index of the spectra per modified peptide in the train dataset
-            if split == 'train':
-                train_index[spectrum['params']['seq']].append(len(spectra['train']) - 1)
-                
-    os.makedirs(output_dir, exist_ok=True)
-    mgf.write(spectra['val'], os.path.join(output_dir, f"val.mgf"))
-    mgf.write(spectra['test'], os.path.join(output_dir, f"test.mgf"))
-    return spectra['train'], train_index
 
-def create_train_subsets(spectra, train_index, n_train_spectra, n_train_peps, output_dir):
+            # Creating an index of the spectra per modified peptide in the train dataset
+            if split == "train":
+                train_index[spectrum["params"]["seq"]].append(
+                    len(spectra["train"]) - 1
+                )
+
+    os.makedirs(output_dir, exist_ok=True)
+    mgf.write(spectra["val"], os.path.join(output_dir, f"val.mgf"))
+    mgf.write(spectra["test"], os.path.join(output_dir, f"test.mgf"))
+    return spectra["train"], train_index
+
+
+def create_train_subsets(
+    spectra, train_index, n_train_spectra, n_train_peps, output_dir
+):
     spectra_count_dict = {p: len(l) for p, l in train_index.items()}
 
     for n_train_s in n_train_spectra:
         # Get all peptides with enough spectra
-        p_with_enough_spectra = [p for p, c in spectra_count_dict.items() if c >= n_train_s]
-        remaining_peptides = [p for p, c in spectra_count_dict.items() if c < n_train_s]
-    
-        print(f"There are {len(p_with_enough_spectra)} peptides with at least {n_train_s} spectra")
-    
+        p_with_enough_spectra = [
+            p for p, c in spectra_count_dict.items() if c >= n_train_s
+        ]
+        remaining_peptides = [
+            p for p, c in spectra_count_dict.items() if c < n_train_s
+        ]
+
+        print(
+            f"There are {len(p_with_enough_spectra)} peptides with at least {n_train_s} spectra"
+        )
+
         for n_train_p in n_train_peps:
             print(f"Getting {n_train_s} spectra for {n_train_p} peptides")
             if len(spectra_count_dict.keys()) < n_train_p:
                 train_spectra = []
-                print(f"There are only {len(spectra_count_dict.keys())} peptides but requested {n_train_p}")
-    
+                print(
+                    f"There are only {len(spectra_count_dict.keys())} peptides but requested {n_train_p}"
+                )
+
             elif len(p_with_enough_spectra) >= n_train_p:
                 # Sample random peptides and spectra
-                train_peptides = random.sample(p_with_enough_spectra, n_train_p)
-                train_spectra = [spec_i for train_pep in train_peptides for spec_i in
-                                 random.sample(train_index[train_pep], n_train_s)]
-                print(f"Sufficient peptides with sufficient spectra, number of spectra selected: {len(train_spectra)}")
+                train_peptides = random.sample(
+                    p_with_enough_spectra, n_train_p
+                )
+                train_spectra = [
+                    spec_i
+                    for train_pep in train_peptides
+                    for spec_i in random.sample(
+                        train_index[train_pep], n_train_s
+                    )
+                ]
+                print(
+                    f"Sufficient peptides with sufficient spectra, number of spectra selected: {len(train_spectra)}"
+                )
             else:
                 # Get all peptides with enough spectra and sample random spectra
-                train_spectra = [spec_i for train_pep in p_with_enough_spectra for spec_i in
-                                 random.sample(train_index[train_pep], n_train_s)]
-                print(f"Got {len(train_spectra)} spectra from peptides with enough spectra")
-    
+                train_spectra = [
+                    spec_i
+                    for train_pep in p_with_enough_spectra
+                    for spec_i in random.sample(
+                        train_index[train_pep], n_train_s
+                    )
+                ]
+                print(
+                    f"Got {len(train_spectra)} spectra from peptides with enough spectra"
+                )
+
                 # Count how many are missing
                 n_train_p_to_add = n_train_p - len(p_with_enough_spectra)
-    
+
                 # Select random peptides to add
-                train_p_to_add = random.sample(remaining_peptides, n_train_p_to_add)
-    
+                train_p_to_add = random.sample(
+                    remaining_peptides, n_train_p_to_add
+                )
+
                 # Add all spectra for these random peptides
-                train_spectra += [spec_i for train_pep in train_p_to_add for spec_i in train_index[train_pep]]
-                print(f"Added all spectra from random peptides, selected {len(train_spectra)} spectra in total now")
-    
+                train_spectra += [
+                    spec_i
+                    for train_pep in train_p_to_add
+                    for spec_i in train_index[train_pep]
+                ]
+                print(
+                    f"Added all spectra from random peptides, selected {len(train_spectra)} spectra in total now"
+                )
+
             # Shuffle, then get spectra from indices and write to mgf
             random.shuffle(train_spectra)
             train_spectra = [spectra[i] for i in train_spectra]
-            mgf.write(train_spectra, os.path.join(output_dir, f"train_{n_train_s}s_{n_train_p}p.mgf"))
+            mgf.write(
+                train_spectra,
+                os.path.join(
+                    output_dir, f"train_{n_train_s}s_{n_train_p}p.mgf"
+                ),
+            )
             print()
