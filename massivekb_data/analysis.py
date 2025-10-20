@@ -1,5 +1,6 @@
 import os
 import random
+import re
 from collections import defaultdict
 from multiprocessing import cpu_count
 
@@ -23,7 +24,7 @@ def get_train_val_test(split_df):
     return train, val, test
 
 
-def create_sub_mgf(mgf_file, cache_dir, num_spectra=1000):
+def create_sub_mgf(mgf_file, sub_cache_dir, num_spectra=1000):
     sub_spectra = []
     with mgf.read(
         mgf_file,
@@ -36,7 +37,7 @@ def create_sub_mgf(mgf_file, cache_dir, num_spectra=1000):
             if i == num_spectra:
                 break
             sub_spectra.append(spectrum)
-        sub_file = os.path.join(cache_dir, f"sub_{num_spectra}.mgf")
+        sub_file = os.path.join(sub_cache_dir, f"sub_{num_spectra}.mgf")
         mgf.write(sub_spectra, sub_file)
     return sub_file
 
@@ -96,11 +97,12 @@ def split_datasail(
     epsilon=0.1,
     threads=cpu_count(),
     cache_dir=None,
+    from_cache=True,
 ):
     n = len(sequences)
     cache_file = os.path.join(cache_dir, f"split_df_{n}.csv")
 
-    if cache_dir is not None:
+    if cache_dir is not None and from_cache:
         if os.path.exists(cache_file):
             return pd.read_csv(cache_file)
 
@@ -129,10 +131,14 @@ def split_datasail(
 
 
 def add_all_to_split(
-    split_df, unique_sequences, n_threads=cpu_count(), cache_dir=None
+    split_df,
+    unique_sequences,
+    n_threads=cpu_count(),
+    cache_dir=None,
+    from_cache=True,
 ):
     cache_file = os.path.join(cache_dir, f"full_split_df_{len(split_df)}.csv")
-    if cache_dir is not None:
+    if cache_dir is not None and from_cache:
         if os.path.exists(cache_file):
             return pd.read_csv(cache_file)
 
@@ -152,37 +158,51 @@ def add_all_to_split(
     return full_split_df
 
 
-def create_val_test_traini(mgf_file, full_split_df, output_dir, total=None):
+def create_val_test_traini(
+    mgf_file, full_split_df, exclude_ptms, output_dir, total=None
+):
+    ptm_pattern = re.compile("|".join(map(re.escape, exclude_ptms)))
+    match = ptm_pattern.search
+
+    def contains_exclude_ptm(sequence: str) -> bool:
+        return bool(match(sequence))
+
     split_dict = dict(zip(full_split_df["sequence"], full_split_df["split"]))
 
-    spectra = {k: [] for k in ["train", "val", "test"]}
+    spectra = {k: [] for k in ["val", "test", "rare_PTM"]}
     train_index = defaultdict(list)
-    with mgf.read(
+    print("Indexing mgf file, this might take a while")
+    indexed_mgf_reader = mgf.read(
         mgf_file,
-        use_index=False,
+        use_index=True,
         convert_arrays=0,
         read_charges=False,
         read_ions=False,
-    ) as massivekb:
-        for spectrum in tqdm(massivekb, total=total):
-            unmod_pep = remove_ptms(spectrum["params"]["seq"])
-            split = split_dict[unmod_pep]
-            spectra[split].append(spectrum)
+    )
+    for spectrum in tqdm(indexed_mgf_reader, total=total):
+        seq = spectrum["params"]["seq"]
+        if contains_exclude_ptm(seq):
+            spectra["rare_PTM"].append(spectrum)
+            continue
 
-            # Creating an index of the spectra per modified peptide in the train dataset
-            if split == "train":
-                train_index[spectrum["params"]["seq"]].append(
-                    len(spectra["train"]) - 1
-                )
+        unmod_pep = remove_ptms(seq)
+        split = split_dict[unmod_pep]
+
+        if split == "train":
+            train_index[seq].append(spectrum["params"]["title"])
+        else:
+            spectra[split].append(spectrum)
 
     os.makedirs(output_dir, exist_ok=True)
     mgf.write(spectra["val"], os.path.join(output_dir, f"val.mgf"))
     mgf.write(spectra["test"], os.path.join(output_dir, f"test.mgf"))
-    return spectra["train"], train_index
+    mgf.write(spectra["rare_PTM"], os.path.join(output_dir, f"rare_ptm.mgf"))
+
+    return indexed_mgf_reader, train_index
 
 
 def create_train_subsets(
-    spectra, train_index, n_train_spectra, n_train_peps, output_dir
+    indexed_mgf_reader, train_index, n_train_spectra, n_train_peps, output_dir
 ):
     spectra_count_dict = {p: len(l) for p, l in train_index.items()}
 
@@ -200,6 +220,8 @@ def create_train_subsets(
         )
 
         for n_train_p in n_train_peps:
+            if n_train_p is None:
+                n_train_p = len(spectra_count_dict.keys())
             print(f"Getting {n_train_s} spectra for {n_train_p} peptides")
             if len(spectra_count_dict.keys()) < n_train_p:
                 train_spectra = []
@@ -255,9 +277,16 @@ def create_train_subsets(
 
             # Shuffle, then get spectra from indices and write to mgf
             random.shuffle(train_spectra)
-            train_spectra = [spectra[i] for i in train_spectra]
+
+            def train_spectra_generator():
+                for title in tqdm(
+                    train_spectra,
+                    desc=f"Writing train_{n_train_s}s_{n_train_p}p.mgf",
+                ):
+                    yield indexed_mgf_reader.get_spectrum(title)
+
             mgf.write(
-                train_spectra,
+                train_spectra_generator(),
                 os.path.join(
                     output_dir, f"train_{n_train_s}s_{n_train_p}p.mgf"
                 ),
