@@ -14,6 +14,7 @@ import lightning.pytorch.loggers
 import torch
 import torch.utils.data
 import yaml
+from depthcharge import primitives
 from depthcharge.tokenizers import PeptideTokenizer
 from depthcharge.tokenizers.peptides import MskbPeptideTokenizer
 from lightning.pytorch.callbacks import (
@@ -480,6 +481,15 @@ class ModelRunner:
         """Initialize the peptide tokenizer."""
         if self.config.massivekb_tokenizer:
             tokenizer_clss = MskbPeptideTokenizer
+            primitives.MSKB_TO_UNIMOD.update(
+                {
+                    "+229.163": "[TMT6plex]-",
+                    "K+229.163": "K[TMT6plex]",
+                    "S+79.966": "S[Phospho]",
+                    "T+79.966": "T[Phospho]",
+                    "Y+79.966": "Y[Phospho]",
+                }
+            )
         else:
             tokenizer_clss = PeptideTokenizer
 
